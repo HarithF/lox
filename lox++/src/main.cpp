@@ -1,4 +1,6 @@
 #include "error_handler.h"
+#include "scanner.h"
+#include "token.h"
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -52,7 +54,7 @@ void run_prompt(ErrorHandler &error_handler) {
 }
 
 void run(std::istream &stream, ErrorHandler &error_handler) {
-  Scanner scanner(stream);
+  Scanner scanner(stream, error_handler);
   std::vector<Token> tokens = scanner.scan_tokens();
 
   for (auto &tok : tokens) {
