@@ -19,8 +19,10 @@ private:
   std::string buff{};
 
   void tok_scan();
-  void tok_add(TokenType);
   void tok_add(TokenType, LiteralValue);
   char advance();
   bool match(char);
+  void lex_string();
+  bool is_endfile() { return stream_.peek() == EOF; }
+  void tok_add(TokenType tok) { tok_add(tok, std::monostate()); }
 };
