@@ -18,6 +18,17 @@ public:
       : type(type), lexeme(lexeme), literal(literal), line(line) {}
 
   std::string to_string() const {
-    return ""; // still need to implement to_string
+    std::string lit = std::visit(
+        [](auto val) -> std::string {
+          if constexpr (std::is_same_v<decltype(val), std::string>)
+            return val;
+          else if constexpr (std::is_same_v<decltype(val), double>)
+            return std::to_string(val);
+          else
+            return "nil";
+        },
+        literal);
+    return type_to_string(type) + " " + lexeme + " " +
+           lit; // still need to implement to_string
   }
 };
