@@ -1,6 +1,7 @@
 #pragma once
 #include "error_handler.h"
 #include "token.h"
+#include <cctype>
 #include <istream>
 #include <vector>
 
@@ -23,6 +24,10 @@ private:
   char advance();
   bool match(char);
   void lex_string();
+  void lex_number();
+  void lex_id();
   bool is_endfile() { return stream_.peek() == EOF; }
   void tok_add(TokenType tok) { tok_add(tok, std::monostate()); }
+  bool is_alpha(char c) { return isalpha(c) || c == '_'; }
+  bool is_alpha_num(char c) { return is_alpha(c) || std::isdigit(c); }
 };

@@ -1,8 +1,27 @@
 #include "scanner.h"
 #include "token.h"
+#include <cctype>
+#include <optional>
+#include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
-
+static const std::unordered_map<std::string, TokenType> keywords = {
+    {"and", TokenType::AND},       {"class", TokenType::CLASS},
+    {"else", TokenType::ELSE},     {"false", TokenType::FALSE},
+    {"for", TokenType::FOR},       {"fun", TokenType::FUN},
+    {"if", TokenType::IF},         {"nil", TokenType::NIL},
+    {"or", TokenType::OR},         {"print", TokenType::PRINT},
+    {"return", TokenType::RETURN}, {"super", TokenType::SUPER},
+    {"this", TokenType::THIS},     {"true", TokenType::TRUE},
+    {"var", TokenType::VAR},       {"while", TokenType::WHILE},
+};
+std::optional<TokenType> keyword_type(const std::string &word) {
+  auto it = keywords.find(word);
+  if (it != keywords.end())
+    return it->second;
+  return {};
+}
 std::vector<Token> Scanner::scan_tokens() {
   while (stream_.peek() != EOF) {
     tok_scan();
@@ -10,10 +29,8 @@ std::vector<Token> Scanner::scan_tokens() {
   tokens_.push_back(Token(TokenType::EOF_, "", std::monostate{}, line));
   return tokens_;
 }
-
 void Scanner::tok_scan() {
   char c = advance();
-
   switch (c) {
   case '(':
     tok_add(TokenType::LEFT_PAREN);
@@ -77,23 +94,26 @@ void Scanner::tok_scan() {
     line++;
     buff.clear();
     break;
-
   case '"':
     lex_string();
     break;
   default:
-    error_handler_.error(line, "Unexpected character.");
-    buff.clear();
+    if (std::isdigit(c)) {
+      lex_number();
+    } else if (is_alpha(c)) {
+      lex_id();
+    } else {
+      error_handler_.error(line, "Unexpected character.");
+      buff.clear();
+    }
     break;
   }
 }
-
 char Scanner::advance() {
   char cur = stream_.get();
   buff += cur;
   return cur;
 }
-
 void Scanner::tok_add(TokenType tok, LiteralValue lit) {
   tokens_.push_back(Token(tok, buff, lit, line));
   buff.clear();
@@ -119,4 +139,32 @@ void Scanner::lex_string() {
   advance();
   auto value = buff.substr(1, buff.size() - 2); // strip opening and closing "
   tok_add(TokenType::STRING, value);
+}
+void Scanner::lex_number() {
+  while (isdigit(stream_.peek())) {
+    advance();
+  }
+  if (stream_.peek() == '.') {
+    auto dot = stream_.get();
+    if (isdigit(stream_.peek())) {
+      buff += dot;
+      while (isdigit(stream_.peek())) {
+        advance();
+      }
+    } else {
+      stream_.putback(dot);
+    }
+  }
+  auto value = std::stod(buff);
+  tok_add(TokenType::NUMBER, value);
+}
+void Scanner::lex_id() {
+  while (is_alpha_num(stream_.peek())) {
+    advance();
+  }
+  if (auto type = keyword_type(buff)) {
+    tok_add(*type);
+  } else {
+    tok_add(TokenType::IDENTIFIER);
+  }
 }
