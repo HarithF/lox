@@ -7,6 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(lox
     src/main.cpp
-    src/token.cpp
+    src/scanner.cpp
 )
 

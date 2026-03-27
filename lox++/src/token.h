@@ -25,10 +25,9 @@ public:
           else if constexpr (std::is_same_v<decltype(val), double>)
             return std::to_string(val);
           else
-            return "nil";
+            return "";
         },
         literal);
-    return type_to_string(type) + " " + lexeme + " " +
-           lit; // still need to implement to_string
+    return type_to_string(type) + " " + lexeme + " " + lit;
   }
 };

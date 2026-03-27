@@ -14,7 +14,7 @@
 #include <system_error>
 #include <vector>
 
-void run_file(std::string &, ErrorHandler &);
+void run_file(const std::string &, ErrorHandler &);
 void run_prompt(ErrorHandler &);
 void run(std::istream &, ErrorHandler &);
 
@@ -58,6 +58,6 @@ void run(std::istream &stream, ErrorHandler &error_handler) {
   std::vector<Token> tokens = scanner.scan_tokens();
 
   for (auto &tok : tokens) {
-    std::print("{}", tok);
+    std::print("{}", tok.to_string());
   }
 }

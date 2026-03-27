@@ -132,5 +132,7 @@ static std::string type_to_string(TokenType type) {
     return "WHILE";
   case TokenType::EOF_:
     return "EOF";
+  default:
+    return "";
   }
 }

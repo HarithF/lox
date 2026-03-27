@@ -81,6 +81,23 @@ void Scanner::tok_scan() {
         advance();
       }
       buff.clear();
+    } else if (match('*')) {
+      int depth = 1;
+      while (!is_endfile() && depth > 0) {
+        if (stream_.peek() == '\n')
+          line++;
+
+        if (advance() == '/' && stream_.peek() == '*') {
+          advance(); // consume *
+          depth++;
+        } else if (buff.back() == '*' && stream_.peek() == '/') {
+          advance(); // consume /
+          depth--;
+        }
+      }
+      if (is_endfile() && depth > 0)
+        error_handler_.error(line, "Unterminated block comment!");
+      buff.clear();
     } else {
       tok_add(TokenType::SLASH);
     }
