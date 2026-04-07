@@ -3,8 +3,6 @@
 #include <iostream>
 #include <string>
 #include <variant>
-// equivalent of Java's Object literal — can hold string, double, or nothing
-// (null)
 using LiteralValue = std::variant<std::string, double, std::monostate>;
 
 class Token {
@@ -25,7 +23,7 @@ public:
           else if constexpr (std::is_same_v<decltype(val), double>)
             return std::to_string(val);
           else
-            return "";
+            return "nil";
         },
         literal);
     return type_to_string(type) + " " + lexeme + " " + lit;

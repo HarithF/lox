@@ -1,17 +1,13 @@
 #include "error_handler.h"
 #include "scanner.h"
 #include "token.h"
-#include <cstddef>
-#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <istream>
 #include <print>
-#include <stdio.h>
 #include <string>
-#include <system_error>
 #include <vector>
 
 void run_file(const std::string &, ErrorHandler &);
