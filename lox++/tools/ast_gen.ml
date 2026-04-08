@@ -3,10 +3,10 @@ try
     match Sys.argv with
     [|_; outputdir|] ->
         let classes = 
-          ["Binary : Expr left, Token operator, Expr right";
-          "Grouping : Expr expression";
-          "Literal : Object value";
-          "Unary : Token operator, Expr right"] in 
+          ["Binary - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";
+          "Grouping - std::unique_ptr<Expr> expression";
+          "Literal - LiteralValue value";
+          "Unary - Token operator_, std::unique_ptr<Expr> right"] in 
 
         Define_ast.create_ast outputdir "Expr" classes
 
