@@ -1,3 +1,4 @@
+#include "ast_printer.h"
 #include "error_handler.h"
 #include "scanner.h"
 #include "token.h"
@@ -21,6 +22,10 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   } else if (argc == 2) {
     std::string filename(argv[1]);
+    if (filename == "pretty-test") {
+      AstPrinter::test_printer();
+      return 0;
+    }
     run_file(filename, error_handler);
   } else {
     run_prompt(error_handler);
