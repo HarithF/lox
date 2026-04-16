@@ -3,6 +3,7 @@
 #include "token.h"
 #include <print>
 #include <string>
+#include <type_traits>
 #include <variant>
 
 struct AstPrinter : ExprVisitor {
@@ -24,7 +25,7 @@ struct AstPrinter : ExprVisitor {
           using T = std::decay_t<decltype(val)>;
           if constexpr (std::is_same_v<T, std::monostate>)
             return std::string("nil");
-          else if constexpr (std::is_same_v<T, double>)
+          else if constexpr (std::is_arithmetic_v<T>)
             return std::to_string(val);
           else
             return val;

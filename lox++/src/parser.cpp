@@ -62,20 +62,49 @@ ExprPtr Parser::unary() {
 ExprPtr Parser::primary() {
   switch (peek().type) {
   case TokenType::FALSE:
+    advance();
     return std::make_unique<Literal>(false);
   case TokenType::TRUE:
+    advance();
     return std::make_unique<Literal>(true);
   case TokenType::NIL:
-    return std::make_unique<Literal>(std::monostate);
+    advance();
+    return std::make_unique<Literal>(std::monostate());
   case TokenType::NUMBER:
-  case TokenType::STRING:
-    return std::make_unique<Literal>(previous().literal);
-
-  case TokenType::LEFT_PAREN:
+  case TokenType::STRING: {
+    auto val = peek().literal;
+    advance();
+    return std::make_unique<Literal>(val);
+  }
+  case TokenType::LEFT_PAREN: {
+    advance();
     auto expr = expression();
     consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
-    return std::make_unique<Grouping>(expr);
+    return std::make_unique<Grouping>(std::move(expr));
+  }
   default:
-    break;
+    throw error(peek(), "Expect expression.");
+  }
+}
+
+void Parser::synchronize() {
+  advance();
+  while (!is_at_end()) {
+    if (previous().type == TokenType::SEMICOLON)
+      return;
+    switch (peek().type) {
+    case TokenType::CLASS:
+    case TokenType::FUN:
+    case TokenType::VAR:
+    case TokenType::FOR:
+    case TokenType::IF:
+    case TokenType::WHILE:
+    case TokenType::PRINT:
+    case TokenType::RETURN:
+      return;
+    default:
+      break;
+    }
+    advance();
   }
 }

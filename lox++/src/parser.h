@@ -1,17 +1,32 @@
 #pragma once
 #include "Expr.h"
+#include "error_handler.h"
 #include "token.h"
 #include <initializer_list>
 #include <vector>
 
 using ExprPtr = std::unique_ptr<Expr>;
 
+struct ParseError : std::runtime_error {
+  ParseError() : std::runtime_error("parse error") {}
+};
+
 class Parser {
 public:
-  Parser(const std::vector<Token> &tokens) : tokens_(tokens) {}
+  Parser(const std::vector<Token> &tokens, ErrorHandler &error_handler)
+      : tokens_(tokens), error_handler_(error_handler) {}
+
+  ExprPtr parse() {
+    try {
+      return expression();
+    } catch (const ParseError &) {
+      return nullptr;
+    }
+  }
 
 private:
   std::vector<Token> tokens_;
+  ErrorHandler error_handler_;
   int curr = 0;
 
   ExprPtr expression();
@@ -21,6 +36,24 @@ private:
   ExprPtr factor();
   ExprPtr unary();
   ExprPtr primary();
+
+  void synchronize();
+
+  Token consume(TokenType type, std::string message) {
+    if (check(type))
+      return advance();
+
+    throw error(peek(), message);
+  };
+
+  ParseError error(const Token &token, const std::string &message) {
+    if (token.type == TokenType::EOF_) {
+      error_handler_.report(token.line, " at end", message);
+    } else {
+      error_handler_.report(token.line, " at '" + token.lexeme + "'", message);
+    }
+    return ParseError();
+  }
 
   bool match(std::initializer_list<TokenType> types) {
     for (auto type : types) {

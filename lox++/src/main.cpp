@@ -1,5 +1,6 @@
 #include "ast_printer.h"
 #include "error_handler.h"
+#include "parser.h"
 #include "scanner.h"
 #include "token.h"
 #include <cstdlib>
@@ -57,8 +58,11 @@ void run_prompt(ErrorHandler &error_handler) {
 void run(std::istream &stream, ErrorHandler &error_handler) {
   Scanner scanner(stream, error_handler);
   std::vector<Token> tokens = scanner.scan_tokens();
+  Parser parser = Parser(tokens, error_handler);
+  ExprPtr expr = parser.parse();
 
-  for (auto &tok : tokens) {
-    std::print("{}", tok.to_string());
-  }
+  if (error_handler.had_error())
+    return;
+
+  std::println("{}", AstPrinter().print(*expr));
 }

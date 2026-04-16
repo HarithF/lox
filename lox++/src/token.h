@@ -2,8 +2,9 @@
 #include "token_type.h"
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <variant>
-using LiteralValue = std::variant<std::string, double, std::monostate>;
+using LiteralValue = std::variant<std::string, double, bool, std::monostate>;
 
 class Token {
 public:
@@ -20,7 +21,7 @@ public:
         [](auto val) -> std::string {
           if constexpr (std::is_same_v<decltype(val), std::string>)
             return val;
-          else if constexpr (std::is_same_v<decltype(val), double>)
+          else if constexpr (std::is_arithmetic_v<decltype(val)>)
             return std::to_string(val);
           else
             return "nil";
