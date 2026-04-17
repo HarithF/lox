@@ -4,8 +4,17 @@
 #include <memory>
 #include <utility>
 #include <variant>
-ExprPtr Parser::expression() { return equality(); }
+ExprPtr Parser::expression() { return comma(); }
 
+ExprPtr Parser::comma() {
+  auto expr = equality();
+  while (match({TokenType::COMMA})) {
+    Token op = previous();
+    auto right = equality();
+    expr = std::make_unique<Binary>(std::move(expr), op, std::move(right));
+  }
+  return expr;
+}
 ExprPtr Parser::equality() {
   auto expr = comparasion();
   while (match({TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL})) {

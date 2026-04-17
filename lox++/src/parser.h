@@ -30,6 +30,7 @@ private:
   int curr = 0;
 
   ExprPtr expression();
+  ExprPtr comma();
   ExprPtr equality();
   ExprPtr comparasion();
   ExprPtr term();
