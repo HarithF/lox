@@ -59,6 +59,12 @@ void Scanner::tok_scan() {
   case ';':
     tok_add(TokenType::SEMICOLON);
     break;
+  case '?':
+    tok_add(TokenType::QUESTION);
+    break;
+  case ':':
+    tok_add(TokenType::COLON);
+    break;
   case '*':
     tok_add(TokenType::STAR);
     break;

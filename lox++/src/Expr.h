@@ -6,64 +6,76 @@ struct Binary;
 struct Grouping;
 struct Literal;
 struct Unary;
+struct Ternary;
 
 struct ExprVisitor {
-	virtual LiteralValue visit(Binary&) = 0;
-	virtual LiteralValue visit(Grouping&) = 0;
-	virtual LiteralValue visit(Literal&) = 0;
-	virtual LiteralValue visit(Unary&) = 0;
-	virtual ~ExprVisitor() = default;
+  virtual LiteralValue visit(Binary &) = 0;
+  virtual LiteralValue visit(Grouping &) = 0;
+  virtual LiteralValue visit(Literal &) = 0;
+  virtual LiteralValue visit(Unary &) = 0;
+  virtual LiteralValue visit(Ternary &) = 0;
+  virtual ~ExprVisitor() = default;
 };
 
 struct Expr {
-	virtual ~Expr() = default;
-	virtual LiteralValue accept(ExprVisitor&) = 0;
+  virtual ~Expr() = default;
+  virtual LiteralValue accept(ExprVisitor &) = 0;
 };
 
-struct Binary : public  Expr {
-	std::unique_ptr<Expr> left;
+struct Binary : public Expr {
+  std::unique_ptr<Expr> left;
 
-	Token operator_;
+  Token operator_;
 
-	std::unique_ptr<Expr> right;
+  std::unique_ptr<Expr> right;
 
-
-	Binary(std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right)
-		: left(std::move(left)), operator_(operator_), right(std::move(right)) {}
-	LiteralValue accept(ExprVisitor& visitor) override {
-		return visitor.visit(*this);
-	}
+  Binary(std::unique_ptr<Expr> left, Token operator_,
+         std::unique_ptr<Expr> right)
+      : left(std::move(left)), operator_(operator_), right(std::move(right)) {}
+  LiteralValue accept(ExprVisitor &visitor) override {
+    return visitor.visit(*this);
+  }
 };
-struct Grouping : public  Expr {
-	std::unique_ptr<Expr> expression;
+struct Grouping : public Expr {
+  std::unique_ptr<Expr> expression;
 
-
-	Grouping(std::unique_ptr<Expr> expression)
-		: expression(std::move(expression)) {}
-	LiteralValue accept(ExprVisitor& visitor) override {
-		return visitor.visit(*this);
-	}
+  Grouping(std::unique_ptr<Expr> expression)
+      : expression(std::move(expression)) {}
+  LiteralValue accept(ExprVisitor &visitor) override {
+    return visitor.visit(*this);
+  }
 };
-struct Literal : public  Expr {
-	LiteralValue value;
+struct Literal : public Expr {
+  LiteralValue value;
 
-
-	Literal(LiteralValue value)
-		: value(std::move(value)) {}
-	LiteralValue accept(ExprVisitor& visitor) override {
-		return visitor.visit(*this);
-	}
+  Literal(LiteralValue value) : value(std::move(value)) {}
+  LiteralValue accept(ExprVisitor &visitor) override {
+    return visitor.visit(*this);
+  }
 };
-struct Unary : public  Expr {
-	Token operator_;
+struct Unary : public Expr {
+  Token operator_;
 
-	std::unique_ptr<Expr> right;
+  std::unique_ptr<Expr> right;
 
-
-	Unary(Token operator_, std::unique_ptr<Expr> right)
-		: operator_(operator_), right(std::move(right)) {}
-	LiteralValue accept(ExprVisitor& visitor) override {
-		return visitor.visit(*this);
-	}
+  Unary(Token operator_, std::unique_ptr<Expr> right)
+      : operator_(operator_), right(std::move(right)) {}
+  LiteralValue accept(ExprVisitor &visitor) override {
+    return visitor.visit(*this);
+  }
 };
+struct Ternary : public Expr {
+  std::unique_ptr<Expr> cond_;
 
+  std::unique_ptr<Expr> then_b;
+
+  std::unique_ptr<Expr> else_b;
+
+  Ternary(std::unique_ptr<Expr> cond_, std::unique_ptr<Expr> then_b,
+          std::unique_ptr<Expr> else_b)
+      : cond_(std::move(cond_)), then_b(std::move(then_b)),
+        else_b(std::move(else_b)) {}
+  LiteralValue accept(ExprVisitor &visitor) override {
+    return visitor.visit(*this);
+  }
+};
