@@ -84,7 +84,7 @@ let define_ast ch super classes =
 
 
 let create_ast file super classes =
-  let channel = open_out (file ^ super ^ ".cpp") in 
+  let channel = open_out (file ^ super ^ ".h") in 
   define_ast channel super classes;
   close_out channel
 
