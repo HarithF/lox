@@ -7,12 +7,27 @@
 ExprPtr Parser::expression() { return comma(); }
 
 ExprPtr Parser::comma() {
-  auto expr = equality();
+  auto expr = ternary();
   while (match({TokenType::COMMA})) {
     Token op = previous();
-    auto right = equality();
+    auto right = ternary();
     expr = std::make_unique<Binary>(std::move(expr), op, std::move(right));
   }
+  return expr;
+}
+
+ExprPtr Parser::ternary() {
+  auto expr = equality();
+
+  if (match({TokenType::QUESTION})) {
+    auto thenBranch = expression();
+    consume(TokenType::COLON,
+            "Expect ':' after then branch of ternary operator.");
+    auto elseBranch = ternary();
+    expr = std::make_unique<Ternary>(std::move(expr), std::move(thenBranch),
+                                     std::move(elseBranch));
+  }
+
   return expr;
 }
 ExprPtr Parser::equality() {

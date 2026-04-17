@@ -33,6 +33,10 @@ struct AstPrinter : ExprVisitor {
         expr.value);
   }
 
+  LiteralValue visit(Ternary &expr) override {
+    return parenthesize("Ternary", *expr.cond_, *expr.then_b, *expr.else_b);
+  }
+
   LiteralValue visit(Unary &expr) override {
     return parenthesize(expr.operator_.lexeme, *expr.right);
   }

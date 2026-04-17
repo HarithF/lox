@@ -31,6 +31,7 @@ private:
 
   ExprPtr expression();
   ExprPtr comma();
+  ExprPtr ternary();
   ExprPtr equality();
   ExprPtr comparasion();
   ExprPtr term();
