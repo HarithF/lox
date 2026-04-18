@@ -1,4 +1,5 @@
 #include "interpreter.h"
+#include "Expr.h"
 #include "token.h"
 
 LiteralValue Interpreter::visit(Literal &expr) { return expr.value; }
@@ -17,6 +18,16 @@ LiteralValue Interpreter::visit(Unary &expr) {
     return !isTruthy(right);
   default:
     return std::monostate();
+  }
+}
+
+LiteralValue Interpreter::visit(Ternary &expr) {
+  auto cond = evaluate(*expr.cond_);
+
+  if (isTruthy(cond)) {
+    return evaluate(*expr.then_b);
+  } else {
+    return evaluate(*expr.else_b);
   }
 }
 

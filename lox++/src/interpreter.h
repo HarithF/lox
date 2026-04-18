@@ -11,6 +11,8 @@ struct Interpreter : ExprVisitor {
 
   LiteralValue visit(Binary &expr) override;
 
+  LiteralValue visit(Ternary &expr) override;
+
 private:
   LiteralValue evaluate(Expr &expr);
   bool isTruthy(const LiteralValue &expr);
