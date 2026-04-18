@@ -1,13 +1,14 @@
 #include "interpreter.h"
+#include "token.h"
 
 LiteralValue Interpreter::visit(Literal &expr) { return expr.value; }
 
 LiteralValue Interpreter::visit(Grouping &expr) {
-  return evaluate(std::move(expr.expression));
+  return evaluate(*expr.expression);
 }
 
 LiteralValue Interpreter::visit(Unary &expr) {
-  auto right = evaluate(std::move(expr.right));
+  auto right = evaluate(*expr.right);
 
   switch (expr.operator_.type) {
   case TokenType::MINUS:
@@ -20,8 +21,8 @@ LiteralValue Interpreter::visit(Unary &expr) {
 }
 
 LiteralValue Interpreter::visit(Binary &expr) {
-  auto right = evaluate(std::move(expr.right));
-  auto left = evaluate(std::move(expr.left));
+  auto right = evaluate(*expr.right);
+  auto left = evaluate(*expr.left);
 
   switch (expr.operator_.type) {
   case TokenType::MINUS:
@@ -30,6 +31,18 @@ LiteralValue Interpreter::visit(Binary &expr) {
     return std::get<double>(left) / std::get<double>(right);
   case TokenType::STAR:
     return std::get<double>(left) * std::get<double>(right);
+  case TokenType::GREATER:
+    return std::get<double>(left) > std::get<double>(right);
+  case TokenType::GREATER_EQUAL:
+    return std::get<double>(left) >= std::get<double>(right);
+  case TokenType::LESS:
+    return std::get<double>(left) < std::get<double>(right);
+  case TokenType::LESS_EQUAL:
+    return std::get<double>(left) <= std::get<double>(right);
+  case TokenType::BANG_EQUAL:
+    return left != right;
+  case TokenType::EQUAL_EQUAL:
+    return left == right;
   case TokenType::PLUS:
     return std::visit(
         [](auto left, auto right) -> LiteralValue {
@@ -51,7 +64,7 @@ LiteralValue Interpreter::visit(Binary &expr) {
   }
 }
 
-LiteralValue Interpreter::evaluate(ExprPtr expr) { return expr->accept(*this); }
+LiteralValue Interpreter::evaluate(Expr &expr) { return expr.accept(*this); }
 
 bool Interpreter::isTruthy(const LiteralValue &expr) {
   return std::visit(
