@@ -36,27 +36,41 @@ LiteralValue Interpreter::visit(Binary &expr) {
   auto left = evaluate(*expr.left);
 
   switch (expr.operator_.type) {
-  case TokenType::MINUS:
-    return std::get<double>(left) - std::get<double>(right);
-  case TokenType::SLASH:
-    return std::get<double>(left) / std::get<double>(right);
-  case TokenType::STAR:
-    return std::get<double>(left) * std::get<double>(right);
-  case TokenType::GREATER:
-    return std::get<double>(left) > std::get<double>(right);
-  case TokenType::GREATER_EQUAL:
-    return std::get<double>(left) >= std::get<double>(right);
-  case TokenType::LESS:
-    return std::get<double>(left) < std::get<double>(right);
-  case TokenType::LESS_EQUAL:
-    return std::get<double>(left) <= std::get<double>(right);
+  case TokenType::MINUS: {
+    auto [l, r] = check_number_operands(expr.operator_, left, right);
+    return l - r;
+  }
+  case TokenType::SLASH: {
+    auto [l, r] = check_number_operands(expr.operator_, left, right);
+    return l / r;
+  }
+  case TokenType::STAR: {
+    auto [l, r] = check_number_operands(expr.operator_, left, right);
+    return l * r;
+  }
+  case TokenType::GREATER: {
+    auto [l, r] = check_number_operands(expr.operator_, left, right);
+    return l > r;
+  }
+  case TokenType::GREATER_EQUAL: {
+    auto [l, r] = check_number_operands(expr.operator_, left, right);
+    return l >= r;
+  }
+  case TokenType::LESS: {
+    auto [l, r] = check_number_operands(expr.operator_, left, right);
+    return l < r;
+  }
+  case TokenType::LESS_EQUAL: {
+    auto [l, r] = check_number_operands(expr.operator_, left, right);
+    return l <= r;
+  }
   case TokenType::BANG_EQUAL:
     return left != right;
   case TokenType::EQUAL_EQUAL:
     return left == right;
   case TokenType::PLUS:
     return std::visit(
-        [](auto left, auto right) -> LiteralValue {
+        [&expr](auto left, auto right) -> LiteralValue {
           using Tl = std::decay_t<decltype(left)>;
           using Tr = std::decay_t<decltype(right)>;
           if constexpr (std::is_same_v<Tl, double> &&
@@ -66,7 +80,9 @@ LiteralValue Interpreter::visit(Binary &expr) {
                                std::is_same_v<Tr, std::string>) {
             return left + right;
           } else
-            return std::monostate();
+            throw RuntimeError(
+                expr.operator_,
+                "Operands must agree, two doubles or  two string");
         },
         left, right);
   default:
