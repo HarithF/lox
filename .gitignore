@@ -3,6 +3,15 @@
 *.exe
 *.app
 *.elf
+#ocaml
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
 
 # CMake Build
 build/
