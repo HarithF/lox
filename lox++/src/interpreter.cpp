@@ -1,6 +1,16 @@
 #include "interpreter.h"
 #include "Expr.h"
 #include "token.h"
+#include <print>
+
+void Interpreter::interpret(Expr &expr) {
+  try {
+    auto result = evaluate(expr);
+    std::println("{}", stringify(result));
+  } catch (const RuntimeError &e) {
+    error_handler_.report(e.token_.line, "", e.what());
+  }
+}
 
 LiteralValue Interpreter::visit(Literal &expr) { return expr.value; }
 
@@ -105,4 +115,23 @@ bool Interpreter::isTruthy(const LiteralValue &expr) {
           return true;
       },
       expr);
+}
+
+std::string stringify(const LiteralValue &value) {
+  return std::visit(
+      [](auto val) -> std::string {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, std::monostate>)
+          return "nil";
+        else if constexpr (std::is_same_v<T, bool>)
+          return val ? "true" : "false";
+        else if constexpr (std::is_same_v<T, double>) {
+          std::string text = std::to_string(val);
+          if (text.ends_with(".000000"))
+            text = text.substr(0, text.size() - 7);
+          return text;
+        } else
+          return val;
+      },
+      value);
 }

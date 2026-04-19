@@ -1,5 +1,7 @@
 #include "Expr.h"
+#include "error_handler.h"
 #include "token.h"
+#include <string>
 
 struct RuntimeError : std::runtime_error {
   Token token_;
@@ -8,6 +10,10 @@ struct RuntimeError : std::runtime_error {
 };
 
 struct Interpreter : ExprVisitor {
+  Interpreter(ErrorHandler &error_handler) : error_handler_(error_handler) {}
+
+  void interpret(Expr &expr);
+
   LiteralValue visit(Literal &expr) override;
 
   LiteralValue visit(Grouping &expr) override;
@@ -19,8 +25,10 @@ struct Interpreter : ExprVisitor {
   LiteralValue visit(Ternary &expr) override;
 
 private:
+  ErrorHandler &error_handler_;
   LiteralValue evaluate(Expr &expr);
   bool isTruthy(const LiteralValue &expr);
+  std::string stringify(const LiteralValue &value);
 
   template <typename T>
   T check_operand(const Token &op, const LiteralValue &val,
