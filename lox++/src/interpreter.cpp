@@ -52,6 +52,8 @@ LiteralValue Interpreter::visit(Binary &expr) {
   }
   case TokenType::SLASH: {
     auto [l, r] = check_number_operands(expr.operator_, left, right);
+    if (r == 0.0)
+      throw RuntimeError(expr.operator_, "Division by zero.");
     return l / r;
   }
   case TokenType::STAR: {
@@ -80,15 +82,14 @@ LiteralValue Interpreter::visit(Binary &expr) {
     return left == right;
   case TokenType::PLUS:
     return std::visit(
-        [&expr](auto left, auto right) -> LiteralValue {
+        [&expr, this](auto left, auto right) -> LiteralValue {
           using Tl = std::decay_t<decltype(left)>;
           using Tr = std::decay_t<decltype(right)>;
           if constexpr (std::is_same_v<Tl, double> &&
                         std::is_same_v<Tr, double>) {
             return left + right;
-          } else if constexpr (std::is_same_v<Tl, std::string> &&
-                               std::is_same_v<Tr, std::string>) {
-            return left + right;
+          } else if constexpr (std::is_same_v<Tl, std::string>) {
+            return left + stringify(right);
           } else
             throw RuntimeError(
                 expr.operator_,
