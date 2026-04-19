@@ -8,7 +8,7 @@ void Interpreter::interpret(Expr &expr) {
     auto result = evaluate(expr);
     std::println("{}", stringify(result));
   } catch (const RuntimeError &e) {
-    error_handler_.report(e.token_.line, "", e.what());
+    error_handler_.runtime_error(e.token_.line, e.what());
   }
 }
 
