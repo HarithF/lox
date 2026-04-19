@@ -117,7 +117,7 @@ bool Interpreter::isTruthy(const LiteralValue &expr) {
       expr);
 }
 
-std::string stringify(const LiteralValue &value) {
+std::string Interpreter::stringify(const LiteralValue &value) {
   return std::visit(
       [](auto val) -> std::string {
         using T = std::decay_t<decltype(val)>;
