@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "Expr.h"
+#include "Stmt.h"
 #include "token.h"
 #include <memory>
 #include <utility>
@@ -109,6 +110,28 @@ ExprPtr Parser::primary() {
   default:
     throw error(peek(), "Expect expression.");
   }
+}
+
+StmtPtr Parser::statement() {
+  switch (peek().type) {
+  case TokenType::PRINT:
+    advance();
+    return print_stmt();
+  default:
+    return expr_stmt();
+  }
+}
+
+StmtPtr Parser::print_stmt() {
+  auto val = expression();
+  consume(TokenType::SEMICOLON, "Expect ';' after expression");
+  return std::make_unique<PrintStmt>(val);
+}
+
+StmtPtr Parser::expr_stmt() {
+  auto expr = expression();
+  consume(TokenType::SEMICOLON, "Expect ';' after expression");
+  return std::make_unique<ExprStmt>(expr);
 }
 
 void Parser::synchronize() {

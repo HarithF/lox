@@ -9,7 +9,12 @@ try
           "Unary - Token operator_, std::unique_ptr<Expr> right";
           "Ternary - std::unique_ptr<Expr> cond_, std::unique_ptr<Expr> then_b, std::unique_ptr<Expr> else_b"] in 
 
-        Define_ast.create_ast outputdir "Expr" classes
+        Define_ast.create_ast outputdir "Expr" classes "LiteralValue" "token";
+        let stmts = 
+          ["ExprStmt - std::unique_ptr<Expr> expression";
+          "PrintStmt - std::unique_ptr<Expr> expression"] in 
+
+        Define_ast.create_ast outputdir "Stmt" stmts "void" "Expr"
 
     | _ -> 
         print_string "Usage: generate_ast <filename>";

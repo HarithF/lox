@@ -1,11 +1,13 @@
 #pragma once
 #include "Expr.h"
+#include "Stmt.h"
 #include "error_handler.h"
 #include "token.h"
 #include <initializer_list>
 #include <vector>
 
 using ExprPtr = std::unique_ptr<Expr>;
+using StmtPtr = std::unique_ptr<Stmt>;
 
 struct ParseError : std::runtime_error {
   ParseError() : std::runtime_error("parse error") {}
@@ -16,12 +18,12 @@ public:
   Parser(const std::vector<Token> &tokens, ErrorHandler &error_handler)
       : tokens_(tokens), error_handler_(error_handler) {}
 
-  ExprPtr parse() {
-    try {
-      return expression();
-    } catch (const ParseError &) {
-      return nullptr;
+  std::vector<Stmt> parse() {
+    std::vector<Stmt> statements{};
+    while (!is_at_end()) {
+      statements.push_back(statement());
     }
+    return statements;
   }
 
 private:
@@ -38,6 +40,10 @@ private:
   ExprPtr factor();
   ExprPtr unary();
   ExprPtr primary();
+
+  StmtPtr statement();
+  StmtPtr print_stmt();
+  StmtPtr expr_stmt();
 
   void synchronize();
 
