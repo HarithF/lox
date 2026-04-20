@@ -18,8 +18,8 @@ public:
   Parser(const std::vector<Token> &tokens, ErrorHandler &error_handler)
       : tokens_(tokens), error_handler_(error_handler) {}
 
-  std::vector<Stmt> parse() {
-    std::vector<Stmt> statements{};
+  std::vector<StmtPtr> parse() {
+    std::vector<StmtPtr> statements{};
     while (!is_at_end()) {
       statements.push_back(statement());
     }

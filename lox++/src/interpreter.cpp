@@ -1,12 +1,14 @@
 #include "interpreter.h"
 #include "Expr.h"
+#include "Stmt.h"
 #include "token.h"
 #include <print>
+#include <vector>
 
-void Interpreter::interpret(Expr &expr) {
+void Interpreter::interpret(const std::vector<StmtPtr> &program) {
   try {
-    auto result = evaluate(expr);
-    std::println("{}", stringify(result));
+    for (const auto &stmt : program)
+      execute(*stmt);
   } catch (const RuntimeError &e) {
     error_handler_.runtime_error(e.token_.line, e.what());
   }
@@ -102,7 +104,15 @@ LiteralValue Interpreter::visit(Binary &expr) {
   }
 }
 
+void Interpreter::visit(ExprStmt &stmt) { evaluate(*stmt.expression); }
+
+void Interpreter::visit(PrintStmt &stmt) {
+  auto expr = evaluate(*stmt.expression);
+  std::println("{}", stringify(expr));
+}
+
 LiteralValue Interpreter::evaluate(Expr &expr) { return expr.accept(*this); }
+void Interpreter::execute(Stmt &stmt) { stmt.accept(*this); }
 
 bool Interpreter::isTruthy(const LiteralValue &expr) {
   return std::visit(

@@ -67,11 +67,11 @@ void run(std::istream &stream, ErrorHandler &error_handler,
   Scanner scanner(stream, error_handler);
   std::vector<Token> tokens = scanner.scan_tokens();
   Parser parser = Parser(tokens, error_handler);
-  ExprPtr expr = parser.parse();
+  auto statements = parser.parse();
 
-  if (!expr)
+  if (error_handler.had_runtime_error())
     return;
-  interpreter.interpret(*expr);
+  interpreter.interpret(statements);
 
-  std::println("{}", AstPrinter().print(*expr));
+  // std::println("{}", AstPrinter().print(*expr));
 }

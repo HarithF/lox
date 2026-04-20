@@ -3,6 +3,9 @@
 #include "error_handler.h"
 #include "token.h"
 #include <string>
+#include <vector>
+
+using StmtPtr = std::unique_ptr<Stmt>;
 
 struct RuntimeError : std::runtime_error {
   Token token_;
@@ -13,7 +16,7 @@ struct RuntimeError : std::runtime_error {
 struct Interpreter : ExprVisitor, StmtVisitor {
   Interpreter(ErrorHandler &error_handler) : error_handler_(error_handler) {}
 
-  void interpret(Expr &expr);
+  void interpret(const std::vector<StmtPtr> &);
 
   LiteralValue visit(Literal &expr) override;
 
