@@ -1,5 +1,6 @@
 #include "Expr.h"
 #include "Stmt.h"
+#include "environment.h"
 #include "error_handler.h"
 #include "token.h"
 #include <string>
@@ -7,35 +8,31 @@
 
 using StmtPtr = std::unique_ptr<Stmt>;
 
-struct RuntimeError : std::runtime_error {
-  Token token_;
-  RuntimeError(Token token, const std::string &message)
-      : token_(token), std::runtime_error(message) {}
-};
-
 struct Interpreter : ExprVisitor, StmtVisitor {
   Interpreter(ErrorHandler &error_handler) : error_handler_(error_handler) {}
 
   void interpret(const std::vector<StmtPtr> &);
 
   LiteralValue visit(Literal &expr) override;
-
   LiteralValue visit(Grouping &expr) override;
-
   LiteralValue visit(Unary &expr) override;
-
   LiteralValue visit(Binary &expr) override;
-
   LiteralValue visit(Ternary &expr) override;
+  LiteralValue visit(Variable &expr) override;
+  LiteralValue visit(Assign &expr) override;
 
   void visit(PrintStmt &stmt) override;
   void visit(ExprStmt &stmt) override;
+  void visit(VarStmt &stmt) override;
+  void visit(BlockStmt &stmt) override;
 
 private:
   ErrorHandler &error_handler_;
+  Environment env = Environment();
 
   LiteralValue evaluate(Expr &expr);
   void execute(Stmt &stmt);
+  void execute_block(const std::vector<StmtPtr> &, Environment);
 
   bool isTruthy(const LiteralValue &expr);
   std::string stringify(const LiteralValue &value);

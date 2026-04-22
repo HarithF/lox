@@ -1,6 +1,7 @@
 #include "interpreter.h"
 #include "Expr.h"
 #include "Stmt.h"
+#include "environment.h"
 #include "token.h"
 #include <print>
 #include <vector>
@@ -104,6 +105,14 @@ LiteralValue Interpreter::visit(Binary &expr) {
   }
 }
 
+LiteralValue Interpreter::visit(Variable &expr) { return env.get(expr.name); }
+
+LiteralValue Interpreter::visit(Assign &expr) {
+  auto value = evaluate(*expr.expression);
+  env.assign(expr.name, value);
+  return value;
+}
+
 void Interpreter::visit(ExprStmt &stmt) { evaluate(*stmt.expression); }
 
 void Interpreter::visit(PrintStmt &stmt) {
@@ -111,8 +120,29 @@ void Interpreter::visit(PrintStmt &stmt) {
   std::println("{}", stringify(expr));
 }
 
+void Interpreter::visit(VarStmt &stmt) {
+  LiteralValue value = std::monostate{};
+  if (stmt.initializer)
+    value = evaluate(*stmt.initializer);
+  env.define(stmt.name.lexeme, value);
+}
+
+void Interpreter::visit(BlockStmt &stmt) {
+  execute_block(stmt.statements, Environment(env));
+}
 LiteralValue Interpreter::evaluate(Expr &expr) { return expr.accept(*this); }
 void Interpreter::execute(Stmt &stmt) { stmt.accept(*this); }
+
+void Interpreter::execute_block(const std::vector<StmtPtr> &statements,
+                                Environment env) {
+  Environment previous = this->env;
+  ScopeGuard guard([&]() { this->env = previous; });
+
+  this->env = env;
+
+  for (const auto &stmt : statements)
+    execute(*stmt);
+}
 
 bool Interpreter::isTruthy(const LiteralValue &expr) {
   return std::visit(

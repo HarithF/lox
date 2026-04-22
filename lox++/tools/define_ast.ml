@@ -13,7 +13,7 @@ let define_constructor ch classname fields=
     List.map (fun fld ->
       match String.split_on_char ' ' (String.trim fld) with
       | [typ; name] ->
-          if typ = "std::unique_ptr<Expr>" || typ = "LiteralValue"
+          if Utils.contains_substring typ "std::unique_ptr" || typ = "LiteralValue"
           then name ^ "(std::move(" ^ name ^ "))"
           else name ^ "(" ^ name ^ ")"
       | _ -> raise (Invalid_argument "bad sub-class")
@@ -77,9 +77,15 @@ let define_type ch super ret_type classinfo =
 | _ -> raise (Invalid_argument "bad class format")
   
 
-let define_ast ch super classes ret_type pckg= 
-  output_string ch ("#pragma once\n#include <memory>\n");
-  if pckg <> "" then output_string ch ("#include \"" ^ pckg ^ ".h\"\n\n");
+let define_ast ch super classes ret_type pckgs= 
+  output_string ch ("#pragma once\n");
+  List.iter (fun inc ->
+    if String.length inc > 0 && inc.[0] = '<' then
+        output_string ch ("#include " ^ inc ^ "\n")
+    else
+        output_string ch ("#include \"" ^ inc ^ ".h\"\n")
+) pckgs;
+  newline ch;
   define_forward_decls ch classes;
   define_visitor ch super classes ret_type;
   define_base_struct ch super ret_type;

@@ -3,18 +3,22 @@ try
     match Sys.argv with
     [|_; outputdir|] ->
         let classes = 
-          ["Binary - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";
+          ["Assign - Token name, std::unique_ptr<Expr> expression";
+          "Binary - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";
           "Grouping - std::unique_ptr<Expr> expression";
           "Literal - LiteralValue value";
           "Unary - Token operator_, std::unique_ptr<Expr> right";
-          "Ternary - std::unique_ptr<Expr> cond_, std::unique_ptr<Expr> then_b, std::unique_ptr<Expr> else_b"] in 
+          "Ternary - std::unique_ptr<Expr> cond_, std::unique_ptr<Expr> then_b, std::unique_ptr<Expr> else_b";
+          "Variable - Token name"] in 
 
-        Define_ast.create_ast outputdir "Expr" classes "LiteralValue" "token";
+        Define_ast.create_ast outputdir "Expr" classes "LiteralValue" ["token"; "<memory>"];
         let stmts = 
-          ["ExprStmt - std::unique_ptr<Expr> expression";
-          "PrintStmt - std::unique_ptr<Expr> expression"] in 
+          ["BlockStmt - std::vector<std::unique_ptr<Stmt>> statements";
+          "ExprStmt - std::unique_ptr<Expr> expression";
+          "PrintStmt - std::unique_ptr<Expr> expression";
+          "VarStmt - Token name, std::unique_ptr<Expr> initializer"] in 
 
-        Define_ast.create_ast outputdir "Stmt" stmts "void" "Expr"
+        Define_ast.create_ast outputdir "Stmt" stmts "void" ["Expr"; "<vector>"]
 
     | _ -> 
         print_string "Usage: generate_ast <filename>";

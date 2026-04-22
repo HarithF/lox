@@ -21,7 +21,7 @@ public:
   std::vector<StmtPtr> parse() {
     std::vector<StmtPtr> statements{};
     while (!is_at_end()) {
-      statements.push_back(statement());
+      statements.push_back(declaration());
     }
     return statements;
   }
@@ -33,6 +33,7 @@ private:
 
   ExprPtr expression();
   ExprPtr comma();
+  ExprPtr assignment();
   ExprPtr ternary();
   ExprPtr equality();
   ExprPtr comparasion();
@@ -41,9 +42,12 @@ private:
   ExprPtr unary();
   ExprPtr primary();
 
+  StmtPtr declaration();
+  StmtPtr var_declaration();
   StmtPtr statement();
   StmtPtr print_stmt();
   StmtPtr expr_stmt();
+  std::vector<StmtPtr> block();
 
   void synchronize();
 

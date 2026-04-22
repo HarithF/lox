@@ -5,14 +5,29 @@
 #include <memory>
 #include <utility>
 #include <variant>
+#include <vector>
 ExprPtr Parser::expression() { return comma(); }
 
 ExprPtr Parser::comma() {
-  auto expr = ternary();
+  auto expr = assignment();
   while (match({TokenType::COMMA})) {
     Token op = previous();
-    auto right = ternary();
+    auto right = assignment();
     expr = std::make_unique<Binary>(std::move(expr), op, std::move(right));
+  }
+  return expr;
+}
+
+ExprPtr Parser::assignment() {
+  auto expr = ternary();
+  if (match({TokenType::EQUAL})) {
+    auto equals = previous();
+    auto value = assignment();
+
+    if (auto *var = dynamic_cast<Variable *>(expr.get())) {
+      return std::make_unique<Assign>(var->name, std::move(value));
+    }
+    error(equals, "Invalid assignment target.");
   }
   return expr;
 }
@@ -107,9 +122,33 @@ ExprPtr Parser::primary() {
     consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
     return std::make_unique<Grouping>(std::move(expr));
   }
+  case TokenType::IDENTIFIER:
+    advance();
+    return std::make_unique<Variable>(previous());
   default:
     throw error(peek(), "Expect expression.");
   }
+}
+
+StmtPtr Parser::declaration() {
+  try {
+    if (match({TokenType::VAR}))
+      return var_declaration();
+    return statement();
+  } catch (ParseError &error) {
+    synchronize();
+    return nullptr;
+  }
+}
+
+StmtPtr Parser::var_declaration() {
+  auto name = consume(TokenType::IDENTIFIER, "Expect variable name.");
+  ExprPtr init;
+  if (match({TokenType::EQUAL}))
+    init = expression();
+
+  consume(TokenType::SEMICOLON, "Expect ';' after variable declaration.");
+  return std::make_unique<VarStmt>(name, std::move(init));
 }
 
 StmtPtr Parser::statement() {
@@ -117,21 +156,35 @@ StmtPtr Parser::statement() {
   case TokenType::PRINT:
     advance();
     return print_stmt();
+  case TokenType::LEFT_BRACE:
+    advance();
+    return std::make_unique<BlockStmt>(block());
+
   default:
     return expr_stmt();
   }
 }
 
+std::vector<StmtPtr> Parser::block() {
+  std::vector<StmtPtr> statements{};
+
+  while (!check(TokenType::RIGHT_BRACE) && !is_at_end()) {
+    statements.push_back(declaration());
+  }
+  consume(TokenType::RIGHT_BRACE, "Expect '}' after block.");
+  return statements;
+}
+
 StmtPtr Parser::print_stmt() {
   auto val = expression();
   consume(TokenType::SEMICOLON, "Expect ';' after expression");
-  return std::make_unique<PrintStmt>(val);
+  return std::make_unique<PrintStmt>(std::move(val));
 }
 
 StmtPtr Parser::expr_stmt() {
   auto expr = expression();
   consume(TokenType::SEMICOLON, "Expect ';' after expression");
-  return std::make_unique<ExprStmt>(expr);
+  return std::make_unique<ExprStmt>(std::move(expr));
 }
 
 void Parser::synchronize() {

@@ -1,4 +1,4 @@
-#include "ast_printer.h"
+// #include "ast_printer.h"
 #include "error_handler.h"
 #include "interpreter.h"
 #include "parser.h"
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   } else if (argc == 2) {
     std::string filename(argv[1]);
     if (filename == "pretty-test") {
-      AstPrinter::test_printer();
+      // AstPrinter::test_printer();
       return 0;
     }
     run_file(filename, error_handler);
