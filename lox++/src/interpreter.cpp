@@ -3,13 +3,17 @@
 #include "Stmt.h"
 #include "environment.h"
 #include "token.h"
+#include <optional>
 #include <print>
 #include <vector>
 
 void Interpreter::interpret(const std::vector<StmtPtr> &program) {
   try {
-    for (const auto &stmt : program)
+    for (const auto &stmt : program) {
+      if (!stmt)
+        continue;
       execute(*stmt);
+    }
   } catch (const RuntimeError &e) {
     error_handler_.runtime_error(e.token_.line, e.what());
   }
@@ -121,10 +125,10 @@ void Interpreter::visit(PrintStmt &stmt) {
 }
 
 void Interpreter::visit(VarStmt &stmt) {
-  LiteralValue value = std::monostate{};
+  std::optional<LiteralValue> value = std::nullopt;
   if (stmt.initializer)
     value = evaluate(*stmt.initializer);
-  env.define(stmt.name.lexeme, value);
+  env.define(stmt.name.lexeme, std::move(value));
 }
 
 void Interpreter::visit(BlockStmt &stmt) {

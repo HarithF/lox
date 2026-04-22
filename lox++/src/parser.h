@@ -26,6 +26,17 @@ public:
     return statements;
   }
 
+  ExprPtr parse_expr() {
+    try {
+      auto expr = expression();
+      if (!is_at_end())
+        return nullptr;
+      return expr;
+    } catch (const ParseError &) {
+      return nullptr;
+    }
+  }
+
 private:
   std::vector<Token> tokens_;
   ErrorHandler error_handler_;

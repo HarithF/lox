@@ -26,7 +26,7 @@ public:
 
   Environment(Environment *enclose) : enclosing_(enclose) {}
 
-  void define(const std::string &name, LiteralValue value) {
+  void define(const std::string &name, std::optional<LiteralValue> value) {
     values[name] = std::move(value);
   }
 
@@ -45,8 +45,12 @@ public:
 
   LiteralValue get(const Token &name) {
     auto it = values.find(name.lexeme);
-    if (it != values.end())
-      return it->second;
+    if (it != values.end()) {
+      if (!it->second)
+        throw RuntimeError(name,
+                           "Variable '" + name.lexeme + "' is uninitialized.");
+      return *it->second;
+    }
     if (enclosing_)
       return enclosing_->get(name);
     throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
@@ -54,5 +58,5 @@ public:
 
 private:
   Environment *enclosing_;
-  std::unordered_map<std::string, LiteralValue> values;
+  std::unordered_map<std::string, std::optional<LiteralValue>> values;
 };

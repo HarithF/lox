@@ -16,6 +16,7 @@
 void run_file(const std::string &, ErrorHandler &);
 void run_prompt(ErrorHandler &);
 void run(std::istream &, ErrorHandler &, Interpreter &);
+void run_repl(std::istream &, ErrorHandler &, Interpreter &);
 
 int main(int argc, char **argv) {
   ErrorHandler error_handler;
@@ -57,7 +58,7 @@ void run_prompt(ErrorHandler &error_handler) {
     if (!std::getline(std::cin, line))
       break;
     std::istringstream stream(line);
-    run(stream, error_handler, interpreter);
+    run_repl(stream, error_handler, interpreter);
     error_handler.reset();
   }
 }
@@ -74,4 +75,29 @@ void run(std::istream &stream, ErrorHandler &error_handler,
   interpreter.interpret(statements);
 
   // std::println("{}", AstPrinter().print(*expr));
+}
+
+void run_repl(std::istream &stream, ErrorHandler &error_handler,
+              Interpreter &interpreter) {
+  Scanner scanner(stream, error_handler);
+  auto tokens = scanner.scan_tokens();
+  if (error_handler.had_error())
+    return;
+
+  // try parsing as expression first
+  Parser expr_parser(tokens, error_handler);
+  auto expr = expr_parser.parse_expr();
+  if (expr && !error_handler.had_error()) {
+    auto result = interpreter.evaluate(*expr);
+    std::println("{}", interpreter.stringify(result));
+    return;
+  }
+
+  // reset and try as statement
+  error_handler.reset();
+  Parser stmt_parser(tokens, error_handler);
+  auto stmts = stmt_parser.parse();
+  if (error_handler.had_error())
+    return;
+  interpreter.interpret(stmts);
 }
