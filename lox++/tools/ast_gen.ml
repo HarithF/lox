@@ -7,6 +7,7 @@ try
           "Binary - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";
           "Grouping - std::unique_ptr<Expr> expression";
           "Literal - LiteralValue value";
+          "Logical - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";
           "Unary - Token operator_, std::unique_ptr<Expr> right";
           "Ternary - std::unique_ptr<Expr> cond_, std::unique_ptr<Expr> then_b, std::unique_ptr<Expr> else_b";
           "Variable - Token name"] in 
@@ -15,6 +16,7 @@ try
         let stmts = 
           ["BlockStmt - std::vector<std::unique_ptr<Stmt>> statements";
           "ExprStmt - std::unique_ptr<Expr> expression";
+          "IfStmt - std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> then_b, std::unique_ptr<Stmt> else_b";
           "PrintStmt - std::unique_ptr<Expr> expression";
           "VarStmt - Token name, std::unique_ptr<Expr> initializer"] in 
 

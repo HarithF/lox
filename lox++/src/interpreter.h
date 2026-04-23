@@ -20,9 +20,11 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   LiteralValue visit(Ternary &expr) override;
   LiteralValue visit(Variable &expr) override;
   LiteralValue visit(Assign &expr) override;
+  LiteralValue visit(Logical &expr) override;
 
   void visit(PrintStmt &stmt) override;
   void visit(ExprStmt &stmt) override;
+  void visit(IfStmt &stmt) override;
   void visit(VarStmt &stmt) override;
   void visit(BlockStmt &stmt) override;
 

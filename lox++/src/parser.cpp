@@ -33,7 +33,7 @@ ExprPtr Parser::assignment() {
 }
 
 ExprPtr Parser::ternary() {
-  auto expr = equality();
+  auto expr = or_op();
 
   if (match({TokenType::QUESTION})) {
     auto thenBranch = expression();
@@ -46,6 +46,27 @@ ExprPtr Parser::ternary() {
 
   return expr;
 }
+ExprPtr Parser::or_op() {
+  auto expr = and_op();
+
+  while (match({TokenType::OR})) {
+    Token operator_ = previous();
+    auto right = and_op();
+    expr = std::make_unique<Logical>(expr, operator_, right)
+  }
+  return expr;
+}
+ExprPtr Parser::and_op() {
+  auto expr = equality();
+
+  while (match({TokenType::OR})) {
+    Token operator_ = previous();
+    auto right = equality();
+    expr = std::make_unique<Logical>(expr, operator_, right)
+  }
+  return expr;
+}
+
 ExprPtr Parser::equality() {
   auto expr = comparasion();
   while (match({TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL})) {
@@ -153,6 +174,9 @@ StmtPtr Parser::var_declaration() {
 
 StmtPtr Parser::statement() {
   switch (peek().type) {
+  case TokenType::IF:
+    advance();
+    return if_stmt();
   case TokenType::PRINT:
     advance();
     return print_stmt();
@@ -185,6 +209,22 @@ StmtPtr Parser::expr_stmt() {
   auto expr = expression();
   consume(TokenType::SEMICOLON, "Expect ';' after expression");
   return std::make_unique<ExprStmt>(std::move(expr));
+}
+
+StmtPtr Parser::if_stmt() {
+  consume(TokenType::LEFT_PAREN, "Expect '(' after 'if'.");
+  auto cond = expression();
+  consume(TokenType::RIGHT_PAREN, "Expect ')' after if condition");
+
+  auto then_b = statement();
+  StmtPtr else_b{};
+
+  if (match({TokenType::ELSE})) {
+    else_b = statement();
+  }
+
+  return std::make_unique<IfStmt>(std::move(cond), std::move(then_b),
+                                  std::move(else_b));
 }
 
 void Parser::synchronize() {

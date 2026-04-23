@@ -46,6 +46,8 @@ private:
   ExprPtr comma();
   ExprPtr assignment();
   ExprPtr ternary();
+  ExprPtr or_op();
+  ExprPtr and_op();
   ExprPtr equality();
   ExprPtr comparasion();
   ExprPtr term();
@@ -58,6 +60,7 @@ private:
   StmtPtr statement();
   StmtPtr print_stmt();
   StmtPtr expr_stmt();
+  StmtPtr if_stmt();
   std::vector<StmtPtr> block();
 
   void synchronize();

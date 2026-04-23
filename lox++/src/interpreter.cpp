@@ -117,6 +117,20 @@ LiteralValue Interpreter::visit(Assign &expr) {
   return value;
 }
 
+LiteralValue Interpreter::visit(Logical &expr) {
+  auto left = evaluate(*expr.left);
+
+  if (expr.operator_.type == TokenType::OR) {
+    if (isTruthy(left))
+      return left;
+  } else if (!isTruthy(left)) {
+    return left;
+  }
+  return evaluate(*expr.right);
+}
+
+//        ..... Statements .....
+
 void Interpreter::visit(ExprStmt &stmt) { evaluate(*stmt.expression); }
 
 void Interpreter::visit(PrintStmt &stmt) {
@@ -129,6 +143,14 @@ void Interpreter::visit(VarStmt &stmt) {
   if (stmt.initializer)
     value = evaluate(*stmt.initializer);
   env.define(stmt.name.lexeme, std::move(value));
+}
+
+void Interpreter::visit(IfStmt &stmt) {
+  if (isTruthy(evaluate(*stmt.cond)))
+    execute(*stmt.then_b);
+
+  else if (stmt.then_b)
+    execute(*stmt.then_b);
 }
 
 void Interpreter::visit(BlockStmt &stmt) {
