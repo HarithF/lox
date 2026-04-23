@@ -18,7 +18,8 @@ try
           "ExprStmt - std::unique_ptr<Expr> expression";
           "IfStmt - std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> then_b, std::unique_ptr<Stmt> else_b";
           "PrintStmt - std::unique_ptr<Expr> expression";
-          "VarStmt - Token name, std::unique_ptr<Expr> initializer"] in 
+          "VarStmt - Token name, std::unique_ptr<Expr> initializer";
+          "WhileStmt - std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> body"] in 
 
         Define_ast.create_ast outputdir "Stmt" stmts "void" ["Expr"; "<vector>"]
 

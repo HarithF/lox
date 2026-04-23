@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <istream>
+#include <locale>
 #include <print>
 #include <string>
 #include <vector>
@@ -69,8 +70,7 @@ void run(std::istream &stream, ErrorHandler &error_handler,
   std::vector<Token> tokens = scanner.scan_tokens();
   Parser parser = Parser(tokens, error_handler);
   auto statements = parser.parse();
-
-  if (error_handler.had_runtime_error())
+  if (error_handler.had_error() || error_handler.had_runtime_error())
     return;
   interpreter.interpret(statements);
 

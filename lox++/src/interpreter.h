@@ -27,6 +27,7 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   void visit(IfStmt &stmt) override;
   void visit(VarStmt &stmt) override;
   void visit(BlockStmt &stmt) override;
+  void visit(WhileStmt &stmt) override;
 
   std::string stringify(const LiteralValue &value);
   LiteralValue evaluate(Expr &expr);

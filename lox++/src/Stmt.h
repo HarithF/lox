@@ -7,6 +7,7 @@ struct ExprStmt;
 struct IfStmt;
 struct PrintStmt;
 struct VarStmt;
+struct WhileStmt;
 
 struct StmtVisitor {
 	virtual void visit(BlockStmt&) = 0;
@@ -14,6 +15,7 @@ struct StmtVisitor {
 	virtual void visit(IfStmt&) = 0;
 	virtual void visit(PrintStmt&) = 0;
 	virtual void visit(VarStmt&) = 0;
+	virtual void visit(WhileStmt&) = 0;
 	virtual ~StmtVisitor() = default;
 };
 
@@ -74,6 +76,18 @@ struct VarStmt : public  Stmt {
 
 	VarStmt(Token name, std::unique_ptr<Expr> initializer)
 		: name(name), initializer(std::move(initializer)) {}
+	void accept(StmtVisitor& visitor) override {
+		visitor.visit(*this);
+	}
+};
+struct WhileStmt : public  Stmt {
+	std::unique_ptr<Expr> cond;
+
+	std::unique_ptr<Stmt> body;
+
+
+	WhileStmt(std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> body)
+		: cond(std::move(cond)), body(std::move(body)) {}
 	void accept(StmtVisitor& visitor) override {
 		visitor.visit(*this);
 	}

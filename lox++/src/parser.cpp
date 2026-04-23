@@ -2,6 +2,7 @@
 #include "Expr.h"
 #include "Stmt.h"
 #include "token.h"
+#include <cmath>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -52,17 +53,19 @@ ExprPtr Parser::or_op() {
   while (match({TokenType::OR})) {
     Token operator_ = previous();
     auto right = and_op();
-    expr = std::make_unique<Logical>(expr, operator_, right)
+    expr = std::make_unique<Logical>(std::move(expr), std::move(operator_),
+                                     std::move(right));
   }
   return expr;
 }
 ExprPtr Parser::and_op() {
   auto expr = equality();
 
-  while (match({TokenType::OR})) {
+  while (match({TokenType::AND})) {
     Token operator_ = previous();
     auto right = equality();
-    expr = std::make_unique<Logical>(expr, operator_, right)
+    expr = std::make_unique<Logical>(std::move(expr), std::move(operator_),
+                                     std::move(right));
   }
   return expr;
 }
@@ -162,6 +165,8 @@ StmtPtr Parser::declaration() {
   }
 }
 
+//       .....  Statements .......
+
 StmtPtr Parser::var_declaration() {
   auto name = consume(TokenType::IDENTIFIER, "Expect variable name.");
   ExprPtr init;
@@ -183,6 +188,13 @@ StmtPtr Parser::statement() {
   case TokenType::LEFT_BRACE:
     advance();
     return std::make_unique<BlockStmt>(block());
+
+  case TokenType::WHILE:
+    advance();
+    return while_stmt();
+
+  case TokenType::FOR:
+    return for_stmt();
 
   default:
     return expr_stmt();
@@ -225,6 +237,57 @@ StmtPtr Parser::if_stmt() {
 
   return std::make_unique<IfStmt>(std::move(cond), std::move(then_b),
                                   std::move(else_b));
+}
+
+StmtPtr Parser::while_stmt() {
+  consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
+  auto cond = expression();
+  consume(TokenType::RIGHT_PAREN, "Expect ')' after while condition.");
+  auto body = statement();
+
+  return std::make_unique<WhileStmt>(std::move(cond), std::move(body));
+}
+
+StmtPtr Parser::for_stmt() {
+  consume(TokenType::LEFT_PAREN, "Expect '(' after 'for'.");
+  StmtPtr init{};
+  if (match({TokenType::SEMICOLON}))
+    ;
+  // continue;
+  else if (match({TokenType::VAR}))
+    init = var_declaration();
+  else
+    init = expr_stmt();
+
+  ExprPtr cond{};
+  if (!match({TokenType::SEMICOLON}))
+    cond = expression();
+  consume(TokenType::SEMICOLON, "Expect ';' after loop condition.");
+
+  ExprPtr increment{};
+  if (!match({TokenType::SEMICOLON}))
+    increment = expression();
+  consume(TokenType::RIGHT_PAREN, "Expect ';' after for clauses");
+
+  auto body = statement();
+  if (increment) {
+    std::vector<StmtPtr> stmts;
+    stmts.push_back(std::move(body));
+    stmts.push_back(std::make_unique<ExprStmt>(std::move(increment)));
+    body = std::make_unique<BlockStmt>(std::move(stmts));
+  }
+  if (!cond)
+    cond = std::make_unique<Literal>(true);
+  body = std::make_unique<WhileStmt>(std::move(cond), std::move(body));
+
+  if (init) {
+    std::vector<StmtPtr> stmts;
+    stmts.push_back(std::move(init));
+    stmts.push_back(std::move(body));
+    body = std::make_unique<BlockStmt>(std::move(stmts));
+  }
+
+  return body;
 }
 
 void Parser::synchronize() {

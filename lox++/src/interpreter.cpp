@@ -149,8 +149,14 @@ void Interpreter::visit(IfStmt &stmt) {
   if (isTruthy(evaluate(*stmt.cond)))
     execute(*stmt.then_b);
 
-  else if (stmt.then_b)
-    execute(*stmt.then_b);
+  else if (stmt.else_b)
+    execute(*stmt.else_b);
+}
+
+void Interpreter::visit(WhileStmt &stmt) {
+  while (isTruthy(evaluate(*stmt.cond))) {
+    execute(*stmt.body);
+  }
 }
 
 void Interpreter::visit(BlockStmt &stmt) {

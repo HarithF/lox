@@ -61,6 +61,8 @@ private:
   StmtPtr print_stmt();
   StmtPtr expr_stmt();
   StmtPtr if_stmt();
+  StmtPtr while_stmt();
+  StmtPtr for_stmt();
   std::vector<StmtPtr> block();
 
   void synchronize();
