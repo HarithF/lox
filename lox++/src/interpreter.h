@@ -9,7 +9,8 @@
 using StmtPtr = std::unique_ptr<Stmt>;
 
 struct Interpreter : ExprVisitor, StmtVisitor {
-  Interpreter(ErrorHandler &error_handler) : error_handler_(error_handler) {}
+  Interpreter(ErrorHandler &error_handler)
+      : error_handler_(error_handler), env_(&global_) {}
 
   void interpret(const std::vector<StmtPtr> &);
 
@@ -28,16 +29,18 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   void visit(VarStmt &stmt) override;
   void visit(BlockStmt &stmt) override;
   void visit(WhileStmt &stmt) override;
+  void visit(BreakStmt &stmt) override;
 
   std::string stringify(const LiteralValue &value);
   LiteralValue evaluate(Expr &expr);
 
 private:
   ErrorHandler &error_handler_;
-  Environment env = Environment();
+  Environment global_;
+  Environment *env_;
 
   void execute(Stmt &stmt);
-  void execute_block(const std::vector<StmtPtr> &, Environment);
+  void execute_block(const std::vector<StmtPtr> &, Environment &);
 
   bool isTruthy(const LiteralValue &expr);
 

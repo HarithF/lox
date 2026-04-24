@@ -49,6 +49,7 @@ enum class TokenType {
   TRUE,
   VAR,
   WHILE,
+  BREAK,
 
   EOF_
 
@@ -132,6 +133,8 @@ static std::string type_to_string(TokenType type) {
     return "VAR";
   case TokenType::WHILE:
     return "WHILE";
+  case TokenType::BREAK:
+    return "BREAK";
   case TokenType::EOF_:
     return "EOF";
   default:

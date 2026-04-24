@@ -15,6 +15,7 @@ static const std::unordered_map<std::string, TokenType> keywords = {
     {"return", TokenType::RETURN}, {"super", TokenType::SUPER},
     {"this", TokenType::THIS},     {"true", TokenType::TRUE},
     {"var", TokenType::VAR},       {"while", TokenType::WHILE},
+    {"break", TokenType::BREAK},
 };
 std::optional<TokenType> keyword_type(const std::string &word) {
   auto it = keywords.find(word);

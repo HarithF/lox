@@ -8,6 +8,7 @@ struct IfStmt;
 struct PrintStmt;
 struct VarStmt;
 struct WhileStmt;
+struct BreakStmt;
 
 struct StmtVisitor {
 	virtual void visit(BlockStmt&) = 0;
@@ -16,6 +17,7 @@ struct StmtVisitor {
 	virtual void visit(PrintStmt&) = 0;
 	virtual void visit(VarStmt&) = 0;
 	virtual void visit(WhileStmt&) = 0;
+	virtual void visit(BreakStmt&) = 0;
 	virtual ~StmtVisitor() = default;
 };
 
@@ -88,6 +90,12 @@ struct WhileStmt : public  Stmt {
 
 	WhileStmt(std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> body)
 		: cond(std::move(cond)), body(std::move(body)) {}
+	void accept(StmtVisitor& visitor) override {
+		visitor.visit(*this);
+	}
+};
+struct BreakStmt : public  Stmt {
+	BreakStmt() {}
 	void accept(StmtVisitor& visitor) override {
 		visitor.visit(*this);
 	}

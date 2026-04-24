@@ -109,11 +109,11 @@ LiteralValue Interpreter::visit(Binary &expr) {
   }
 }
 
-LiteralValue Interpreter::visit(Variable &expr) { return env.get(expr.name); }
+LiteralValue Interpreter::visit(Variable &expr) { return env_->get(expr.name); }
 
 LiteralValue Interpreter::visit(Assign &expr) {
   auto value = evaluate(*expr.expression);
-  env.assign(expr.name, value);
+  env_->assign(expr.name, value);
   return value;
 }
 
@@ -142,7 +142,7 @@ void Interpreter::visit(VarStmt &stmt) {
   std::optional<LiteralValue> value = std::nullopt;
   if (stmt.initializer)
     value = evaluate(*stmt.initializer);
-  env.define(stmt.name.lexeme, std::move(value));
+  env_->define(stmt.name.lexeme, std::move(value));
 }
 
 void Interpreter::visit(IfStmt &stmt) {
@@ -154,23 +154,30 @@ void Interpreter::visit(IfStmt &stmt) {
 }
 
 void Interpreter::visit(WhileStmt &stmt) {
-  while (isTruthy(evaluate(*stmt.cond))) {
-    execute(*stmt.body);
+  try {
+    while (isTruthy(evaluate(*stmt.cond))) {
+      execute(*stmt.body);
+    }
+  } catch (const BreakException &) {
   }
 }
 
 void Interpreter::visit(BlockStmt &stmt) {
-  execute_block(stmt.statements, Environment(env));
+  Environment block_env(env_);
+  execute_block(stmt.statements, block_env);
 }
+
+void Interpreter::visit(BreakStmt &) { throw BreakException{}; }
+
 LiteralValue Interpreter::evaluate(Expr &expr) { return expr.accept(*this); }
 void Interpreter::execute(Stmt &stmt) { stmt.accept(*this); }
 
 void Interpreter::execute_block(const std::vector<StmtPtr> &statements,
-                                Environment env) {
-  Environment previous = this->env;
-  ScopeGuard guard([&]() { this->env = previous; });
+                                Environment &new_env) {
+  Environment *previous = env_;
+  ScopeGuard guard([previous, this]() { env_ = previous; });
 
-  this->env = env;
+  env_ = &new_env;
 
   for (const auto &stmt : statements)
     execute(*stmt);

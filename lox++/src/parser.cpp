@@ -194,7 +194,10 @@ StmtPtr Parser::statement() {
     return while_stmt();
 
   case TokenType::FOR:
+    advance();
     return for_stmt();
+  case TokenType::BREAK:
+    return break_stmt();
 
   default:
     return expr_stmt();
@@ -243,8 +246,9 @@ StmtPtr Parser::while_stmt() {
   consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
   auto cond = expression();
   consume(TokenType::RIGHT_PAREN, "Expect ')' after while condition.");
+  loop_depth_++;
   auto body = statement();
-
+  loop_depth_--;
   return std::make_unique<WhileStmt>(std::move(cond), std::move(body));
 }
 
@@ -268,7 +272,7 @@ StmtPtr Parser::for_stmt() {
   if (!match({TokenType::SEMICOLON}))
     increment = expression();
   consume(TokenType::RIGHT_PAREN, "Expect ';' after for clauses");
-
+  loop_depth_++;
   auto body = statement();
   if (increment) {
     std::vector<StmtPtr> stmts;
@@ -286,8 +290,16 @@ StmtPtr Parser::for_stmt() {
     stmts.push_back(std::move(body));
     body = std::make_unique<BlockStmt>(std::move(stmts));
   }
-
+  loop_depth_--;
   return body;
+}
+
+StmtPtr Parser::break_stmt() {
+  auto keyword = advance();
+  consume(TokenType::SEMICOLON, "Expect ';' after 'break'.");
+  if (loop_depth_ == 0)
+    throw error(keyword, "Cannot use 'break' outside of a loop.");
+  return std::make_unique<BreakStmt>();
 }
 
 void Parser::synchronize() {

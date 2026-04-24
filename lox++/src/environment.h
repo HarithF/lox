@@ -12,6 +12,8 @@ struct RuntimeError : std::runtime_error {
       : token_(token), std::runtime_error(message) {}
 };
 
+struct BreakException {};
+
 class ScopeGuard {
   std::function<void()> f;
 

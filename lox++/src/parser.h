@@ -41,6 +41,7 @@ private:
   std::vector<Token> tokens_;
   ErrorHandler error_handler_;
   int curr = 0;
+  int loop_depth_ = 0;
 
   ExprPtr expression();
   ExprPtr comma();
@@ -63,6 +64,7 @@ private:
   StmtPtr if_stmt();
   StmtPtr while_stmt();
   StmtPtr for_stmt();
+  StmtPtr break_stmt();
   std::vector<StmtPtr> block();
 
   void synchronize();

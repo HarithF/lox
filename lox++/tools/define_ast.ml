@@ -8,17 +8,19 @@ let define_base_struct ch super ret_type=
   output_string ch ("};\n\n")
 
 let define_constructor ch classname fields=
-
-  let inits =
-    List.map (fun fld ->
-      match String.split_on_char ' ' (String.trim fld) with
-      | [typ; name] ->
-          if Utils.contains_substring typ "std::unique_ptr" || typ = "LiteralValue"
-          then name ^ "(std::move(" ^ name ^ "))"
-          else name ^ "(" ^ name ^ ")"
-      | _ -> raise (Invalid_argument "bad sub-class")
-    ) (String.split_on_char ',' fields)
-  in
+  if String.trim fields = "" then
+        output_string ch ("\t" ^ classname ^ "() {}\n")
+  else
+    let inits =
+      List.map (fun fld ->
+        match String.split_on_char ' ' (String.trim fld) with
+        | [typ; name] ->
+            if Utils.contains_substring typ "std::unique_ptr" || typ = "LiteralValue"
+            then name ^ "(std::move(" ^ name ^ "))"
+            else name ^ "(" ^ name ^ ")"
+        | _ -> raise (Invalid_argument "bad sub-class")
+      ) (String.split_on_char ',' fields)
+    in
 
   output_string ch ("\t" ^ classname ^ "(");
   output_string ch fields;
@@ -55,15 +57,17 @@ let define_type ch super ret_type classinfo =
     let fields = String.trim fields in
       output_string ch ("struct " ^ classname ^ " : public  " ^ super ^ " {");
       newline ch;
-     List.iter (fun fld ->
-        match String.split_on_char ' ' (String.trim fld) with
-        [typ ; name] -> 
-          output_string ch ("\t" ^ typ ^ " " ^ name ^ ";\n");
-            newline ch 
-        | _ -> raise (Invalid_argument "bad sub-class")
-      )
-      (String.split_on_char ',' fields);
-      newline ch;
+      if fields <> "" then begin
+      List.iter (fun fld ->
+          match String.split_on_char ' ' (String.trim fld) with
+          [typ ; name] -> 
+            output_string ch ("\t" ^ typ ^ " " ^ name ^ ";\n");
+              newline ch 
+          | _ -> raise (Invalid_argument "bad sub-class")
+        )
+        (String.split_on_char ',' fields);
+        newline ch;
+      end;
       define_constructor ch classname fields;
       output_string ch ("\t" ^ ret_type ^ " accept(" ^ super ^ "Visitor& visitor) override {\n");
       if ret_type = "void" then
