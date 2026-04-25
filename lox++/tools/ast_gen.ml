@@ -20,6 +20,7 @@ try
           "FuncStmt - Token name, std::vector<Token> params, std::vector<std::unique_ptr<Stmt>> body";
           "IfStmt - std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> then_b, std::unique_ptr<Stmt> else_b";
           "PrintStmt - std::unique_ptr<Expr> expression";
+          "ReturnStmt - Token keyword, std::unique_ptr<Expr> value";
           "VarStmt - Token name, std::unique_ptr<Expr> initializer";
           "WhileStmt - std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> body";
           "BreakStmt - "] in 

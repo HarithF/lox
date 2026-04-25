@@ -34,6 +34,7 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   void visit(WhileStmt &stmt) override;
   void visit(BreakStmt &stmt) override;
   void visit(FuncStmt &stmt) override;
+  void visit(ReturnStmt &stmt) override;
 
   std::string stringify(const LiteralValue &value);
 

@@ -14,7 +14,11 @@ LiteralValue LoxFunction::call(Interpreter &interpreter,
   Environment env(closure_);
   for (int i = 0; i < (int)declaration_.params.size(); i++)
     env.define(declaration_.params[i].lexeme, args[i]);
-  interpreter.execute_block(declaration_.body, env);
+  try {
+    interpreter.execute_block(declaration_.body, env);
+  } catch (ReturnException ret_value) {
+    return ret_value.value_;
+  }
   return std::monostate{};
 }
 

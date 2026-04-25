@@ -196,6 +196,16 @@ void Interpreter::visit(FuncStmt &stmt) {
   env_->define(stmt.name.lexeme, function);
 }
 
+void Interpreter::visit(ReturnStmt &stmt) {
+  LiteralValue value{};
+  if (stmt.value)
+    value = evaluate(*stmt.value);
+
+  throw ReturnException(value);
+}
+
+//   ...................  Helper Functions   .......................
+
 LiteralValue Interpreter::evaluate(Expr &expr) { return expr.accept(*this); }
 void Interpreter::execute(Stmt &stmt) { stmt.accept(*this); }
 

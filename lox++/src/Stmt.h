@@ -7,6 +7,7 @@ struct ExprStmt;
 struct FuncStmt;
 struct IfStmt;
 struct PrintStmt;
+struct ReturnStmt;
 struct VarStmt;
 struct WhileStmt;
 struct BreakStmt;
@@ -17,6 +18,7 @@ struct StmtVisitor {
 	virtual void visit(FuncStmt&) = 0;
 	virtual void visit(IfStmt&) = 0;
 	virtual void visit(PrintStmt&) = 0;
+	virtual void visit(ReturnStmt&) = 0;
 	virtual void visit(VarStmt&) = 0;
 	virtual void visit(WhileStmt&) = 0;
 	virtual void visit(BreakStmt&) = 0;
@@ -82,6 +84,18 @@ struct PrintStmt : public  Stmt {
 
 	PrintStmt(std::unique_ptr<Expr> expression)
 		: expression(std::move(expression)) {}
+	void accept(StmtVisitor& visitor) override {
+		visitor.visit(*this);
+	}
+};
+struct ReturnStmt : public  Stmt {
+	Token keyword;
+
+	std::unique_ptr<Expr> value;
+
+
+	ReturnStmt(Token keyword, std::unique_ptr<Expr> value)
+		: keyword(keyword), value(std::move(value)) {}
 	void accept(StmtVisitor& visitor) override {
 		visitor.visit(*this);
 	}

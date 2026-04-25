@@ -216,6 +216,8 @@ StmtPtr Parser::statement() {
   case TokenType::LEFT_BRACE:
     advance();
     return std::make_unique<BlockStmt>(block());
+  case TokenType::RETURN:
+    return return_stmt();
 
   case TokenType::WHILE:
     advance();
@@ -347,6 +349,19 @@ StmtPtr Parser::function_stmt(std::string kind) {
   auto body = block();
   return std::make_unique<FuncStmt>(name, std::move(params), std::move(body));
 }
+
+StmtPtr Parser::return_stmt() {
+  Token keyword = advance();
+  ExprPtr value{};
+
+  if (!check(TokenType::SEMICOLON))
+    value = expression();
+
+  consume(TokenType::SEMICOLON, "Expect ';' after return value");
+  return std::make_unique<ReturnStmt>(keyword, std::move(value));
+}
+
+// ..............   Helper Functions   .................
 
 void Parser::synchronize() {
   advance();

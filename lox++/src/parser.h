@@ -68,6 +68,7 @@ private:
   StmtPtr for_stmt();
   StmtPtr break_stmt();
   StmtPtr function_stmt(std::string);
+  StmtPtr return_stmt();
   std::vector<StmtPtr> block();
 
   void synchronize();
