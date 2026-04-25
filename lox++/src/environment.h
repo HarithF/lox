@@ -65,6 +65,10 @@ public:
     throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
   }
 
+  bool is_defined(const std::string &name) const {
+    return values.contains(name);
+  }
+
 private:
   std::shared_ptr<Environment> enclosing_;
   std::unordered_map<std::string, std::optional<LiteralValue>> values;

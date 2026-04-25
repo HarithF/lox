@@ -161,6 +161,9 @@ void Interpreter::visit(PrintStmt &stmt) {
 }
 
 void Interpreter::visit(VarStmt &stmt) {
+  if (env_->is_defined(stmt.name.lexeme))
+    throw RuntimeError(stmt.name, "Variable '" + stmt.name.lexeme +
+                                      "' already declared in this scope.");
   std::optional<LiteralValue> value = std::nullopt;
   if (stmt.initializer)
     value = evaluate(*stmt.initializer);
