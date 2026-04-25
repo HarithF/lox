@@ -1,4 +1,5 @@
 #pragma once
+#include "lox_callable.h"
 #include "token.h"
 #include <functional>
 #include <memory>
@@ -13,6 +14,11 @@ struct RuntimeError : std::runtime_error {
 };
 
 struct BreakException {};
+struct ReturnException {
+  LiteralValue value_;
+
+  ReturnException(LiteralValue value) : value_(value) {};
+};
 
 class ScopeGuard {
   std::function<void()> f;
