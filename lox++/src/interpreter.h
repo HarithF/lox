@@ -10,8 +10,9 @@ using StmtPtr = std::unique_ptr<Stmt>;
 
 struct Interpreter : ExprVisitor, StmtVisitor {
   Interpreter(ErrorHandler &error_handler)
-      : error_handler_(error_handler), env_(&global_) {
-    global_.define("clock", std::make_shared<ClockCallable>());
+      : error_handler_(error_handler), global_(std::make_shared<Environment>()),
+        env_(global_) {
+    global_->define("clock", std::make_shared<ClockCallable>());
   }
 
   void interpret(const std::vector<StmtPtr> &);
@@ -40,12 +41,13 @@ struct Interpreter : ExprVisitor, StmtVisitor {
 
   LiteralValue evaluate(Expr &expr);
   void execute(Stmt &stmt);
-  void execute_block(const std::vector<StmtPtr> &, Environment &);
+  void execute_block(const std::vector<StmtPtr> &,
+                     std::shared_ptr<Environment>);
 
 private:
   ErrorHandler &error_handler_;
-  Environment global_;
-  Environment *env_;
+  std::shared_ptr<Environment> global_;
+  std::shared_ptr<Environment> env_;
 
   bool isTruthy(const LiteralValue &expr);
 

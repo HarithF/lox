@@ -4,16 +4,15 @@
 #include "interpreter.h"
 
 // LoxFunction
-LoxFunction::LoxFunction(FuncStmt &declaration, Environment *closure)
-    : declaration_(declaration), closure_(closure) {}
 
 int LoxFunction::arity() { return declaration_.params.size(); }
 
 LiteralValue LoxFunction::call(Interpreter &interpreter,
                                std::vector<LiteralValue> args) {
-  Environment env(closure_);
+
+  auto env = std::make_shared<Environment>(closure_);
   for (int i = 0; i < (int)declaration_.params.size(); i++)
-    env.define(declaration_.params[i].lexeme, args[i]);
+    env->define(declaration_.params[i].lexeme, args[i]);
   try {
     interpreter.execute_block(declaration_.body, env);
   } catch (ReturnException ret_value) {

@@ -185,8 +185,7 @@ void Interpreter::visit(WhileStmt &stmt) {
 }
 
 void Interpreter::visit(BlockStmt &stmt) {
-  Environment block_env(env_);
-  execute_block(stmt.statements, block_env);
+  execute_block(stmt.statements, std::make_shared<Environment>(env_));
 }
 
 void Interpreter::visit(BreakStmt &) { throw BreakException{}; }
@@ -210,11 +209,11 @@ LiteralValue Interpreter::evaluate(Expr &expr) { return expr.accept(*this); }
 void Interpreter::execute(Stmt &stmt) { stmt.accept(*this); }
 
 void Interpreter::execute_block(const std::vector<StmtPtr> &statements,
-                                Environment &new_env) {
-  Environment *previous = env_;
+                                std::shared_ptr<Environment> new_env) {
+  auto previous = env_;
   ScopeGuard guard([previous, this]() { env_ = previous; });
 
-  env_ = &new_env;
+  env_ = new_env;
 
   for (const auto &stmt : statements)
     execute(*stmt);

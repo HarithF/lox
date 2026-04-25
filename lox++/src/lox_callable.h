@@ -37,9 +37,10 @@ struct ClockCallable : LoxCallable {
 
 struct LoxFunction : LoxCallable {
   FuncStmt &declaration_;
-  Environment *closure_;
+  std::shared_ptr<Environment> closure_;
 
-  LoxFunction(FuncStmt &declaration, Environment *closure);
+  LoxFunction(FuncStmt &declaration, std::shared_ptr<Environment> closure)
+      : declaration_(declaration), closure_(std::move(closure)) {}
   int arity() override;
   LiteralValue call(Interpreter &, std::vector<LiteralValue>) override;
   std::string to_string() const override;
