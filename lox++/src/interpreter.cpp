@@ -2,7 +2,9 @@
 #include "Expr.h"
 #include "Stmt.h"
 #include "environment.h"
+#include "lox_callable.h"
 #include "token.h"
+#include <memory>
 #include <optional>
 #include <print>
 #include <vector>
@@ -23,6 +25,26 @@ LiteralValue Interpreter::visit(Literal &expr) { return expr.value; }
 
 LiteralValue Interpreter::visit(Grouping &expr) {
   return evaluate(*expr.expression);
+}
+
+LiteralValue Interpreter::visit(Call &expr) {
+  auto callee = evaluate(*expr.callee);
+
+  std::vector<LiteralValue> args;
+  for (const auto &arg : expr.args)
+    args.push_back(evaluate(*arg));
+
+  auto *callable = std::get_if<std::shared_ptr<LoxCallable>>(&callee);
+  if (!callable)
+    throw RuntimeError(expr.paren, "Can only call functions and classes.");
+
+  if ((int)args.size() != (*callable)->arity())
+    throw RuntimeError(expr.paren, "Expected " +
+                                       std::to_string((*callable)->arity()) +
+                                       " arguments but got " +
+                                       std::to_string(args.size()) + ".");
+
+  return (*callable)->call(*this, args);
 }
 
 LiteralValue Interpreter::visit(Unary &expr) {
@@ -169,6 +191,11 @@ void Interpreter::visit(BlockStmt &stmt) {
 
 void Interpreter::visit(BreakStmt &) { throw BreakException{}; }
 
+void Interpreter::visit(FuncStmt &stmt) {
+  auto function = std::make_shared<LoxFunction>(stmt, env_);
+  env_->define(stmt.name.lexeme, function);
+}
+
 LiteralValue Interpreter::evaluate(Expr &expr) { return expr.accept(*this); }
 void Interpreter::execute(Stmt &stmt) { stmt.accept(*this); }
 
@@ -210,7 +237,9 @@ std::string Interpreter::stringify(const LiteralValue &value) {
           if (text.ends_with(".000000"))
             text = text.substr(0, text.size() - 7);
           return text;
-        } else
+        } else if constexpr (std::is_same_v<T, std::shared_ptr<LoxCallable>>)
+          return val->to_string();
+        else
           return val;
       },
       value);

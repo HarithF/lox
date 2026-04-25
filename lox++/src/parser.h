@@ -4,6 +4,7 @@
 #include "error_handler.h"
 #include "token.h"
 #include <initializer_list>
+#include <string>
 #include <vector>
 
 using ExprPtr = std::unique_ptr<Expr>;
@@ -54,6 +55,7 @@ private:
   ExprPtr term();
   ExprPtr factor();
   ExprPtr unary();
+  ExprPtr call();
   ExprPtr primary();
 
   StmtPtr declaration();
@@ -65,9 +67,11 @@ private:
   StmtPtr while_stmt();
   StmtPtr for_stmt();
   StmtPtr break_stmt();
+  StmtPtr function_stmt(std::string);
   std::vector<StmtPtr> block();
 
   void synchronize();
+  ExprPtr finish_call(ExprPtr);
 
   Token consume(TokenType type, std::string message) {
     if (check(type))

@@ -1,9 +1,11 @@
 #pragma once
 #include "token.h"
 #include <memory>
+#include <vector>
 
 struct Assign;
 struct Binary;
+struct Call;
 struct Grouping;
 struct Literal;
 struct Logical;
@@ -14,6 +16,7 @@ struct Variable;
 struct ExprVisitor {
 	virtual LiteralValue visit(Assign&) = 0;
 	virtual LiteralValue visit(Binary&) = 0;
+	virtual LiteralValue visit(Call&) = 0;
 	virtual LiteralValue visit(Grouping&) = 0;
 	virtual LiteralValue visit(Literal&) = 0;
 	virtual LiteralValue visit(Logical&) = 0;
@@ -50,6 +53,20 @@ struct Binary : public  Expr {
 
 	Binary(std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right)
 		: left(std::move(left)), operator_(operator_), right(std::move(right)) {}
+	LiteralValue accept(ExprVisitor& visitor) override {
+		return visitor.visit(*this);
+	}
+};
+struct Call : public  Expr {
+	std::unique_ptr<Expr> callee;
+
+	Token paren;
+
+	std::vector<std::unique_ptr<Expr>> args;
+
+
+	Call(std::unique_ptr<Expr> callee, Token paren, std::vector<std::unique_ptr<Expr>> args)
+		: callee(std::move(callee)), paren(paren), args(std::move(args)) {}
 	LiteralValue accept(ExprVisitor& visitor) override {
 		return visitor.visit(*this);
 	}

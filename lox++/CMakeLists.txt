@@ -10,5 +10,6 @@ add_executable(lox
     src/scanner.cpp
     src/parser.cpp
     src/interpreter.cpp
+    src/lox_callable.cpp
 )
 

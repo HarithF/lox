@@ -1,10 +1,10 @@
 #pragma once
+#include "lox_callable.h"
 #include "token_type.h"
 #include <iostream>
 #include <string>
 #include <type_traits>
 #include <variant>
-using LiteralValue = std::variant<std::string, double, bool, std::monostate>;
 
 class Token {
 public:

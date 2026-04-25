@@ -10,13 +10,16 @@ using StmtPtr = std::unique_ptr<Stmt>;
 
 struct Interpreter : ExprVisitor, StmtVisitor {
   Interpreter(ErrorHandler &error_handler)
-      : error_handler_(error_handler), env_(&global_) {}
+      : error_handler_(error_handler), env_(&global_) {
+    global_.define("clock", std::make_shared<ClockCallable>());
+  }
 
   void interpret(const std::vector<StmtPtr> &);
 
   LiteralValue visit(Literal &expr) override;
   LiteralValue visit(Grouping &expr) override;
   LiteralValue visit(Unary &expr) override;
+  LiteralValue visit(Call &expr) override;
   LiteralValue visit(Binary &expr) override;
   LiteralValue visit(Ternary &expr) override;
   LiteralValue visit(Variable &expr) override;
@@ -30,17 +33,18 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   void visit(BlockStmt &stmt) override;
   void visit(WhileStmt &stmt) override;
   void visit(BreakStmt &stmt) override;
+  void visit(FuncStmt &stmt) override;
 
   std::string stringify(const LiteralValue &value);
+
   LiteralValue evaluate(Expr &expr);
+  void execute(Stmt &stmt);
+  void execute_block(const std::vector<StmtPtr> &, Environment &);
 
 private:
   ErrorHandler &error_handler_;
   Environment global_;
   Environment *env_;
-
-  void execute(Stmt &stmt);
-  void execute_block(const std::vector<StmtPtr> &, Environment &);
 
   bool isTruthy(const LiteralValue &expr);
 

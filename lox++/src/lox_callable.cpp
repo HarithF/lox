@@ -1,0 +1,23 @@
+#include "lox_callable.h"
+#include "Stmt.h"
+#include "environment.h"
+#include "interpreter.h"
+
+// LoxFunction
+LoxFunction::LoxFunction(FuncStmt &declaration, Environment *closure)
+    : declaration_(declaration), closure_(closure) {}
+
+int LoxFunction::arity() { return declaration_.params.size(); }
+
+LiteralValue LoxFunction::call(Interpreter &interpreter,
+                               std::vector<LiteralValue> args) {
+  Environment env(closure_);
+  for (int i = 0; i < (int)declaration_.params.size(); i++)
+    env.define(declaration_.params[i].lexeme, args[i]);
+  interpreter.execute_block(declaration_.body, env);
+  return std::monostate{};
+}
+
+std::string LoxFunction::to_string() const {
+  return "<fn " + declaration_.name.lexeme + ">";
+}

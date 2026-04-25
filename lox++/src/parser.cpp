@@ -120,7 +120,20 @@ ExprPtr Parser::unary() {
     auto right = unary();
     return std::make_unique<Unary>(op, std::move(right));
   }
-  return primary();
+  return call();
+}
+
+ExprPtr Parser::call() {
+  auto expr = primary();
+
+  while (true) {
+    if (match({TokenType::LEFT_PAREN})) {
+      expr = finish_call(std::move(expr));
+    } else {
+      break;
+    }
+  }
+  return expr;
 }
 
 ExprPtr Parser::primary() {
@@ -154,18 +167,33 @@ ExprPtr Parser::primary() {
   }
 }
 
+ExprPtr Parser::finish_call(ExprPtr callee) {
+  std::vector<ExprPtr> args{};
+
+  if (!check(TokenType::RIGHT_PAREN)) {
+    do {
+      if (args.size() >= 255)
+        error(peek(), "Can't have more than 255 arguments.");
+      args.push_back(assignment());
+    } while (match({TokenType::COMMA}));
+  }
+  Token paren = consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+  return std::make_unique<Call>(std::move(callee), paren, std::move(args));
+}
+
+//       .....  Statements .......
 StmtPtr Parser::declaration() {
   try {
     if (match({TokenType::VAR}))
       return var_declaration();
+    if (match({TokenType::FUN}))
+      return function_stmt("function");
     return statement();
   } catch (ParseError &error) {
     synchronize();
     return nullptr;
   }
 }
-
-//       .....  Statements .......
 
 StmtPtr Parser::var_declaration() {
   auto name = consume(TokenType::IDENTIFIER, "Expect variable name.");
@@ -300,6 +328,24 @@ StmtPtr Parser::break_stmt() {
   if (loop_depth_ == 0)
     throw error(keyword, "Cannot use 'break' outside of a loop.");
   return std::make_unique<BreakStmt>();
+}
+
+StmtPtr Parser::function_stmt(std::string kind) {
+  Token name = consume(TokenType::IDENTIFIER, "Expect " + kind + " name.");
+  consume(TokenType::LEFT_PAREN, "Expect '(' after " + kind + " name.");
+  std::vector<Token> params{};
+  if (!check(TokenType::RIGHT_PAREN)) {
+    do {
+      if (params.size() >= 255)
+        error(peek(), "Cannot have mroe than 255 parameters");
+      params.push_back(
+          consume(TokenType::IDENTIFIER, "Expect parameter name."));
+    } while (match({TokenType::COMMA}));
+  }
+  consume(TokenType::RIGHT_PAREN, "Expect ')' after parameters");
+  consume(TokenType::LEFT_BRACE, "Expect '{' before " + kind + " body.");
+  auto body = block();
+  return std::make_unique<FuncStmt>(name, std::move(params), std::move(body));
 }
 
 void Parser::synchronize() {

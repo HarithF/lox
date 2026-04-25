@@ -4,6 +4,7 @@
 
 struct BlockStmt;
 struct ExprStmt;
+struct FuncStmt;
 struct IfStmt;
 struct PrintStmt;
 struct VarStmt;
@@ -13,6 +14,7 @@ struct BreakStmt;
 struct StmtVisitor {
 	virtual void visit(BlockStmt&) = 0;
 	virtual void visit(ExprStmt&) = 0;
+	virtual void visit(FuncStmt&) = 0;
 	virtual void visit(IfStmt&) = 0;
 	virtual void visit(PrintStmt&) = 0;
 	virtual void visit(VarStmt&) = 0;
@@ -42,6 +44,20 @@ struct ExprStmt : public  Stmt {
 
 	ExprStmt(std::unique_ptr<Expr> expression)
 		: expression(std::move(expression)) {}
+	void accept(StmtVisitor& visitor) override {
+		visitor.visit(*this);
+	}
+};
+struct FuncStmt : public  Stmt {
+	Token name;
+
+	std::vector<Token> params;
+
+	std::vector<std::unique_ptr<Stmt>> body;
+
+
+	FuncStmt(Token name, std::vector<Token> params, std::vector<std::unique_ptr<Stmt>> body)
+		: name(name), params(params), body(std::move(body)) {}
 	void accept(StmtVisitor& visitor) override {
 		visitor.visit(*this);
 	}
