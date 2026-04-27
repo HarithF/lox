@@ -131,11 +131,17 @@ LiteralValue Interpreter::visit(Binary &expr) {
   }
 }
 
-LiteralValue Interpreter::visit(Variable &expr) { return env_->get(expr.name); }
+LiteralValue Interpreter::visit(Variable &expr) {
+  return look_up_variable(expr.name, expr);
+}
 
 LiteralValue Interpreter::visit(Assign &expr) {
   auto value = evaluate(*expr.expression);
-  env_->assign(expr.name, value);
+  auto it = locals.find(&expr);
+  if (it != locals.end())
+    env_->assign_at(it->second, expr.name, value);
+  else
+    global_->assign(expr.name, value);
   return value;
 }
 
@@ -206,7 +212,20 @@ void Interpreter::visit(ReturnStmt &stmt) {
   throw ReturnException(value);
 }
 
-//   ...................  Helper Functions   .......................
+// ...... Resolver ........
+
+void Interpreter::resolve(Expr &expr, int depth) { locals[&expr] = depth; }
+
+LiteralValue Interpreter::look_up_variable(const Token &name, Expr &expr) {
+  auto it = locals.find(&expr);
+  if (it != locals.end())
+    return env_->get_at(it->second, name.lexeme);
+  else
+    return global_->get(name);
+}
+
+//...................  Helper Functions   .......................
+//
 
 LiteralValue Interpreter::evaluate(Expr &expr) { return expr.accept(*this); }
 void Interpreter::execute(Stmt &stmt) { stmt.accept(*this); }

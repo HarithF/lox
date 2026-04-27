@@ -1,7 +1,7 @@
 // #include "ast_printer.h"
 #include "error_handler.h"
-#include "interpreter.h"
 #include "parser.h"
+#include "resolver.h"
 #include "scanner.h"
 #include "token.h"
 #include <cstdlib>
@@ -72,6 +72,12 @@ void run(std::istream &stream, ErrorHandler &error_handler,
   auto statements = parser.parse();
   if (error_handler.had_error() || error_handler.had_runtime_error())
     return;
+
+  Resolver resolver = Resolver(interpreter, error_handler);
+  resolver.resolve(statements);
+  if (error_handler.had_error())
+    return;
+
   interpreter.interpret(statements);
 
   // std::println("{}", AstPrinter().print(*expr));

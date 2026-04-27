@@ -36,6 +36,9 @@ public:
       : enclosing_(std::move(enclosing)) {}
 
   void define(const std::string &name, std::optional<LiteralValue> value) {
+    if (values.contains(name))
+      throw std::runtime_error("Variable '" + name +
+                               "' already declared in this scope.");
     values[name] = std::move(value);
   }
 
@@ -67,6 +70,26 @@ public:
 
   bool is_defined(const std::string &name) const {
     return values.contains(name);
+  }
+
+  LiteralValue get_at(int distance, std::string name) {
+    auto env = ancestor(distance);
+    auto it = env->values.find(name);
+    if (it != env->values.end() && it->second)
+      return *it->second;
+    throw std::runtime_error("Undefined variable '" + name + "' at distance.");
+  }
+
+  void assign_at(int distance, Token name, LiteralValue value) {
+    ancestor(distance)->values[name.lexeme] = std::move(value);
+  }
+
+  Environment *ancestor(int distance) {
+    Environment *env = this;
+    for (int i = 0; i < distance; i++)
+      env = env->enclosing_.get();
+
+    return env;
   }
 
 private:

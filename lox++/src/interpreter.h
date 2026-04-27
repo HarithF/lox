@@ -3,10 +3,13 @@
 #include "environment.h"
 #include "error_handler.h"
 #include "token.h"
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 using StmtPtr = std::unique_ptr<Stmt>;
+using ExprPtr = std::unique_ptr<Expr>;
 
 struct Interpreter : ExprVisitor, StmtVisitor {
   Interpreter(ErrorHandler &error_handler)
@@ -37,6 +40,8 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   void visit(FuncStmt &stmt) override;
   void visit(ReturnStmt &stmt) override;
 
+  void resolve(Expr &, int);
+
   std::string stringify(const LiteralValue &value);
 
   LiteralValue evaluate(Expr &expr);
@@ -48,8 +53,10 @@ private:
   ErrorHandler &error_handler_;
   std::shared_ptr<Environment> global_;
   std::shared_ptr<Environment> env_;
+  std::unordered_map<Expr *, int> locals;
 
   bool isTruthy(const LiteralValue &expr);
+  LiteralValue look_up_variable(const Token &, Expr &);
 
   template <typename T>
   T check_operand(const Token &op, const LiteralValue &val,
