@@ -24,3 +24,11 @@ LiteralValue LoxFunction::call(Interpreter &interpreter,
 std::string LoxFunction::to_string() const {
   return "<fn " + declaration_.name.lexeme + ">";
 }
+
+LiteralValue LoxInstance::get(Token &name) {
+  auto it = fields_.find(name.lexeme);
+  if (it != fields_.end()) {
+    return it->second;
+  }
+  throw RuntimeError(name, "Undefined property '" + name.lexeme + "'.");
+}

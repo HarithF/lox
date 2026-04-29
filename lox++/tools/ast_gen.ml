@@ -6,6 +6,7 @@ try
           ["Assign - Token name, std::unique_ptr<Expr> expression";
           "Binary - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";
           "Call - std::unique_ptr<Expr> callee, Token paren, std::vector<std::unique_ptr<Expr>> args";
+          "Get - std::unique_ptr<Expr> object, Token name";
           "Grouping - std::unique_ptr<Expr> expression";
           "Literal - LiteralValue value";
           "Logical - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";

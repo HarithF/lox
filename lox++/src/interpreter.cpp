@@ -49,6 +49,15 @@ LiteralValue Interpreter::visit(Call &expr) {
   return (*callable)->call(*this, args);
 }
 
+LiteralValue Interpreter::visit(Get &expr) {
+  LiteralValue object = evaluate(*expr.object);
+  if (auto *instance = std::get_if<std::shared_ptr<LoxInstance>>(&object)) {
+    return (*instance)->get(expr.name); // your field lookup
+  }
+
+  throw RuntimeError(expr.name, "Only instances have properties.");
+}
+
 LiteralValue Interpreter::visit(Unary &expr) {
   auto right = evaluate(*expr.right);
 

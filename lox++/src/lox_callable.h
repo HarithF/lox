@@ -72,6 +72,9 @@ public:
 
   std::string to_string() const { return klass->name_ + " instance"; }
 
+  LiteralValue get(Token &name);
+
 private:
   LoxClass *klass;
+  std::unordered_map<std::string, LiteralValue> fields_{};
 };

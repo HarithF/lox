@@ -47,6 +47,11 @@ LiteralValue Resolver::visit(Call &expr) {
   return std::monostate{};
 }
 
+LiteralValue Resolver::visit(Get &expr) {
+  resolve(*expr.object);
+  return std::monostate{};
+}
+
 LiteralValue Resolver::visit(Grouping &expr) {
   resolve(*expr.expression);
 

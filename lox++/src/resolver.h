@@ -20,6 +20,7 @@ struct Resolver : ExprVisitor, StmtVisitor {
   LiteralValue visit(Assign &) override;
   LiteralValue visit(Binary &) override;
   LiteralValue visit(Call &) override;
+  LiteralValue visit(Get &) override;
   LiteralValue visit(Grouping &) override;
   LiteralValue visit(Literal &) override;
   LiteralValue visit(Logical &) override;

@@ -6,6 +6,7 @@
 struct Assign;
 struct Binary;
 struct Call;
+struct Get;
 struct Grouping;
 struct Literal;
 struct Logical;
@@ -17,6 +18,7 @@ struct ExprVisitor {
 	virtual LiteralValue visit(Assign&) = 0;
 	virtual LiteralValue visit(Binary&) = 0;
 	virtual LiteralValue visit(Call&) = 0;
+	virtual LiteralValue visit(Get&) = 0;
 	virtual LiteralValue visit(Grouping&) = 0;
 	virtual LiteralValue visit(Literal&) = 0;
 	virtual LiteralValue visit(Logical&) = 0;
@@ -67,6 +69,18 @@ struct Call : public  Expr {
 
 	Call(std::unique_ptr<Expr> callee, Token paren, std::vector<std::unique_ptr<Expr>> args)
 		: callee(std::move(callee)), paren(paren), args(std::move(args)) {}
+	LiteralValue accept(ExprVisitor& visitor) override {
+		return visitor.visit(*this);
+	}
+};
+struct Get : public  Expr {
+	std::unique_ptr<Expr> object;
+
+	Token name;
+
+
+	Get(std::unique_ptr<Expr> object, Token name)
+		: object(std::move(object)), name(name) {}
 	LiteralValue accept(ExprVisitor& visitor) override {
 		return visitor.visit(*this);
 	}
