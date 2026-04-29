@@ -39,6 +39,7 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   void visit(BreakStmt &stmt) override;
   void visit(FuncStmt &stmt) override;
   void visit(ReturnStmt &stmt) override;
+  void visit(ClassStmt &stmt) override;
 
   void resolve(Expr &, int);
 

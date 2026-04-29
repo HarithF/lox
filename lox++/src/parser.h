@@ -4,6 +4,7 @@
 #include "error_handler.h"
 #include "token.h"
 #include <initializer_list>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -60,6 +61,7 @@ private:
 
   StmtPtr declaration();
   StmtPtr var_declaration();
+  StmtPtr class_declaration();
   StmtPtr statement();
   StmtPtr print_stmt();
   StmtPtr expr_stmt();
@@ -68,6 +70,7 @@ private:
   StmtPtr for_stmt();
   StmtPtr break_stmt();
   StmtPtr function_stmt(std::string);
+  std::unique_ptr<FuncStmt> function_decl(std::string);
   StmtPtr return_stmt();
   std::vector<StmtPtr> block();
 

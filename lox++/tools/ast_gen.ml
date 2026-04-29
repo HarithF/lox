@@ -18,6 +18,7 @@ try
           ["BlockStmt - std::vector<std::unique_ptr<Stmt>> statements";
           "ExprStmt - std::unique_ptr<Expr> expression";
           "FuncStmt - Token name, std::vector<Token> params, std::vector<std::unique_ptr<Stmt>> body";
+          "ClassStmt - Token name, std::vector<std::unique_ptr<FuncStmt>> methods";
           "IfStmt - std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> then_b, std::unique_ptr<Stmt> else_b";
           "PrintStmt - std::unique_ptr<Expr> expression";
           "ReturnStmt - Token keyword, std::unique_ptr<Expr> value";

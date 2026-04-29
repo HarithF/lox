@@ -5,11 +5,9 @@
 #include "scanner.h"
 #include "token.h"
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <istream>
-#include <locale>
 #include <print>
 #include <string>
 #include <vector>
@@ -75,6 +73,7 @@ void run(std::istream &stream, ErrorHandler &error_handler,
 
   Resolver resolver = Resolver(interpreter, error_handler);
   resolver.resolve(statements);
+  std::cout << "finished pass with " << error_handler.had_error() << std::endl;
   if (error_handler.had_error())
     return;
 

@@ -7,6 +7,8 @@
 #include <memory>
 #include <optional>
 #include <print>
+#include <type_traits>
+#include <variant>
 #include <vector>
 
 void Interpreter::interpret(const std::vector<StmtPtr> &program) {
@@ -212,6 +214,12 @@ void Interpreter::visit(ReturnStmt &stmt) {
   throw ReturnException(value);
 }
 
+void Interpreter::visit(ClassStmt &stmt) {
+  env_->define(stmt.name.lexeme, std::nullopt);
+  auto klass = std::make_shared<LoxClass>(stmt.name.lexeme);
+  env_->assign(stmt.name, klass);
+}
+
 // ...... Resolver ........
 
 void Interpreter::resolve(Expr &expr, int depth) { locals[&expr] = depth; }
@@ -268,7 +276,8 @@ std::string Interpreter::stringify(const LiteralValue &value) {
           if (text.ends_with(".000000"))
             text = text.substr(0, text.size() - 7);
           return text;
-        } else if constexpr (std::is_same_v<T, std::shared_ptr<LoxCallable>>)
+        } else if constexpr (std::is_same_v<T, std::shared_ptr<LoxCallable>> ||
+                             std::is_same_v<T, std::shared_ptr<LoxInstance>>)
           return val->to_string();
         else
           return val;

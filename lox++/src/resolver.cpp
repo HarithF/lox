@@ -12,11 +12,13 @@ LiteralValue Resolver::visit(Variable &expr) {
   if (!scopes.empty()) {
     auto &scope = scopes.top();
     auto it = scope.find(expr.name.lexeme);
-    if (it != scope.end() && it->second == false) {
+    if (it != scope.end() && it->second == VarState::DECLARED) {
       error_handler_.error(
           expr.name.line, "Cannot read local variable in its own initializer.");
     }
   }
+  if (!scopes.empty())
+    scopes.top()[expr.name.lexeme] = VarState::USED;
   resolve_local(expr, expr.name);
   return std::monostate{};
 }
@@ -95,7 +97,14 @@ void Resolver::visit(WhileStmt &stmt) {
 void Resolver::visit(FuncStmt &stmt) {
   declare(stmt.name);
   define(stmt.name);
+  if (!scopes.empty())
+    scopes.top()[stmt.name.lexeme] = VarState::USED;
   resolve_function(stmt, FunctionType::FUNCTION);
+}
+
+void Resolver::visit(ClassStmt &stmt) {
+  declare(stmt.name);
+  define(stmt.name);
 }
 
 void Resolver::visit(ExprStmt &stmt) { resolve(*stmt.expression); }
@@ -129,20 +138,26 @@ void Resolver::resolve(const std::vector<StmtPtr> &statements) {
 
 void Resolver::beginScope() { scopes.push({}); }
 
-void Resolver::endScope() { scopes.pop(); }
+void Resolver::endScope() {
+  for (const auto &[name, state] : scopes.top()) {
+    if (state != VarState::USED)
+      error_handler_.error(0, "Local variable '" + name + "' is never used.");
+  }
+  scopes.pop();
+}
 
 void Resolver::declare(Token name) {
   if (scopes.empty())
     return;
 
-  scopes.top()[name.lexeme] = false;
+  scopes.top()[name.lexeme] = VarState::DECLARED;
 }
 
 void Resolver::define(Token name) {
   if (scopes.empty())
     return;
 
-  scopes.top()[name.lexeme] = true;
+  scopes.top()[name.lexeme] = VarState::DEFINED;
 }
 
 void Resolver::resolve_local(Expr &expr, Token name) {
@@ -150,6 +165,7 @@ void Resolver::resolve_local(Expr &expr, Token name) {
   auto temp = scopes;
   while (!temp.empty()) {
     if (temp.top().contains(name.lexeme)) {
+      temp.top()[name.lexeme] = VarState::USED;
       interpreter_.resolve(expr, depth);
       return;
     }

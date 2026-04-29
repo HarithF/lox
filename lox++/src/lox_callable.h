@@ -1,7 +1,9 @@
 #pragma once
+
 #include <chrono>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -9,9 +11,13 @@ struct LoxCallable;
 struct Interpreter;
 struct FuncStmt;
 struct Environment;
+struct LoxInstance;
 
-using LiteralValue = std::variant<std::string, double, bool, std::monostate,
-                                  std::shared_ptr<LoxCallable>>;
+class Token;
+
+using LiteralValue =
+    std::variant<std::string, double, bool, std::monostate,
+                 std::shared_ptr<LoxCallable>, std::shared_ptr<LoxInstance>>;
 
 struct LoxCallable {
   virtual LiteralValue call(Interpreter &, std::vector<LiteralValue>) = 0;
@@ -44,4 +50,28 @@ struct LoxFunction : LoxCallable {
   int arity() override;
   LiteralValue call(Interpreter &, std::vector<LiteralValue>) override;
   std::string to_string() const override;
+};
+
+struct LoxClass : LoxCallable {
+  std::string name_;
+
+  LoxClass(std::string name) : name_(name) {}
+
+  int arity() override { return 0; }
+
+  LiteralValue call(Interpreter &, std::vector<LiteralValue>) override {
+    return std::make_shared<LoxInstance>(this);
+  }
+
+  std::string to_string() const override { return "<class " + name_ + ">"; }
+};
+
+class LoxInstance {
+public:
+  LoxInstance(LoxClass *klass) : klass(klass) {}
+
+  std::string to_string() const { return klass->name_ + " instance"; }
+
+private:
+  LoxClass *klass;
 };

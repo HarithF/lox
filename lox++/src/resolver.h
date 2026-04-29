@@ -35,15 +35,17 @@ struct Resolver : ExprVisitor, StmtVisitor {
   void visit(ReturnStmt &) override;
   void visit(WhileStmt &) override;
   void visit(BreakStmt &) override;
+  void visit(ClassStmt &) override;
 
   void resolve(const std::vector<StmtPtr> &);
 
   enum class FunctionType { NONE, FUNCTION };
+  enum class VarState { DECLARED, DEFINED, USED };
 
 private:
   Interpreter &interpreter_;
   ErrorHandler error_handler_;
-  std::stack<std::unordered_map<std::string, bool>> scopes{};
+  std::stack<std::unordered_map<std::string, VarState>> scopes{};
 
   FunctionType current_function_ = FunctionType::NONE;
 
