@@ -10,6 +10,8 @@ try
           "Grouping - std::unique_ptr<Expr> expression";
           "Literal - LiteralValue value";
           "Logical - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";
+          "Set - std::unique_ptr<Expr> object, Token name, std::unique_ptr<Expr> value";
+          "This - Token keyword";
           "Unary - Token operator_, std::unique_ptr<Expr> right";
           "Ternary - std::unique_ptr<Expr> cond_, std::unique_ptr<Expr> then_b, std::unique_ptr<Expr> else_b";
           "Variable - Token name"] in 

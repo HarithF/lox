@@ -2,6 +2,7 @@
 #include "Stmt.h"
 #include "environment.h"
 #include "error_handler.h"
+#include "lox_callable.h"
 #include "token.h"
 #include <memory>
 #include <string>
@@ -25,6 +26,8 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   LiteralValue visit(Unary &expr) override;
   LiteralValue visit(Call &expr) override;
   LiteralValue visit(Get &expr) override;
+  LiteralValue visit(Set &expr) override;
+  LiteralValue visit(This &expr) override;
   LiteralValue visit(Binary &expr) override;
   LiteralValue visit(Ternary &expr) override;
   LiteralValue visit(Variable &expr) override;

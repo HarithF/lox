@@ -21,6 +21,8 @@ struct Resolver : ExprVisitor, StmtVisitor {
   LiteralValue visit(Binary &) override;
   LiteralValue visit(Call &) override;
   LiteralValue visit(Get &) override;
+  LiteralValue visit(Set &) override;
+  LiteralValue visit(This &) override;
   LiteralValue visit(Grouping &) override;
   LiteralValue visit(Literal &) override;
   LiteralValue visit(Logical &) override;
@@ -40,12 +42,15 @@ struct Resolver : ExprVisitor, StmtVisitor {
 
   void resolve(const std::vector<StmtPtr> &);
 
-  enum class FunctionType { NONE, FUNCTION };
+  enum class FunctionType { NONE, FUNCTION, METHOD };
   enum class VarState { DECLARED, DEFINED, USED };
+  enum class ClassType { NONE, CLASS };
 
 private:
   Interpreter &interpreter_;
   ErrorHandler error_handler_;
+  ClassType current_class = ClassType::NONE;
+
   std::stack<std::unordered_map<std::string, VarState>> scopes{};
 
   FunctionType current_function_ = FunctionType::NONE;

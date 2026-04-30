@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -50,12 +51,18 @@ struct LoxFunction : LoxCallable {
   int arity() override;
   LiteralValue call(Interpreter &, std::vector<LiteralValue>) override;
   std::string to_string() const override;
+
+  std::shared_ptr<LoxCallable> bind(std::shared_ptr<LoxInstance>);
 };
 
 struct LoxClass : LoxCallable {
   std::string name_;
+  std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods_;
 
-  LoxClass(std::string name) : name_(name) {}
+  LoxClass(
+      std::string name,
+      std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods)
+      : name_(name), methods_(std::move(methods)) {}
 
   int arity() override { return 0; }
 
@@ -63,16 +70,19 @@ struct LoxClass : LoxCallable {
     return std::make_shared<LoxInstance>(this);
   }
 
+  std::shared_ptr<LoxFunction> find_method(std::string name);
+
   std::string to_string() const override { return "<class " + name_ + ">"; }
 };
 
-class LoxInstance {
+class LoxInstance : public std::enable_shared_from_this<LoxInstance> {
 public:
   LoxInstance(LoxClass *klass) : klass(klass) {}
 
   std::string to_string() const { return klass->name_ + " instance"; }
 
-  LiteralValue get(Token &name);
+  LiteralValue get(Token name);
+  void set(Token name, LiteralValue value);
 
 private:
   LoxClass *klass;

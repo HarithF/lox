@@ -8,6 +8,7 @@
 #include <optional>
 #include <print>
 #include <type_traits>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -52,12 +53,26 @@ LiteralValue Interpreter::visit(Call &expr) {
 LiteralValue Interpreter::visit(Get &expr) {
   LiteralValue object = evaluate(*expr.object);
   if (auto *instance = std::get_if<std::shared_ptr<LoxInstance>>(&object)) {
-    return (*instance)->get(expr.name); // your field lookup
+    return (*instance)->get(expr.name);
   }
 
   throw RuntimeError(expr.name, "Only instances have properties.");
 }
 
+LiteralValue Interpreter::visit(Set &expr) {
+  LiteralValue object = evaluate(*expr.object);
+  if (auto *instance = std::get_if<std::shared_ptr<LoxInstance>>(&object)) {
+    LiteralValue value = evaluate(*expr.value);
+    (*instance)->set(expr.name, value);
+    return value;
+  }
+
+  throw RuntimeError(expr.name, "Only instances have fields.");
+}
+
+LiteralValue Interpreter::visit(This &expr) {
+  return look_up_variable(expr.keyword, expr);
+}
 LiteralValue Interpreter::visit(Unary &expr) {
   auto right = evaluate(*expr.right);
 
@@ -225,7 +240,12 @@ void Interpreter::visit(ReturnStmt &stmt) {
 
 void Interpreter::visit(ClassStmt &stmt) {
   env_->define(stmt.name.lexeme, std::nullopt);
-  auto klass = std::make_shared<LoxClass>(stmt.name.lexeme);
+  std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods{};
+  for (auto &method : stmt.methods) {
+    auto function = std::make_shared<LoxFunction>(*method, env_);
+    methods[method->name.lexeme] = std::move(function);
+  }
+  auto klass = std::make_shared<LoxClass>(stmt.name.lexeme, std::move(methods));
   env_->assign(stmt.name, klass);
 }
 

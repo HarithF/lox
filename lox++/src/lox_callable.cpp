@@ -2,6 +2,7 @@
 #include "Stmt.h"
 #include "environment.h"
 #include "interpreter.h"
+#include <memory>
 
 // LoxFunction
 
@@ -25,10 +26,33 @@ std::string LoxFunction::to_string() const {
   return "<fn " + declaration_.name.lexeme + ">";
 }
 
-LiteralValue LoxInstance::get(Token &name) {
+std::shared_ptr<LoxFunction> LoxClass::find_method(const std::string name) {
+  auto it = methods_.find(name);
+  if (it != methods_.end()) {
+    return it->second;
+  }
+  return nullptr;
+}
+
+LiteralValue LoxInstance::get(Token name) {
   auto it = fields_.find(name.lexeme);
   if (it != fields_.end()) {
     return it->second;
   }
+  if (auto method = klass->find_method(name.lexeme)) {
+    return method->bind(shared_from_this());
+    ;
+  }
   throw RuntimeError(name, "Undefined property '" + name.lexeme + "'.");
+}
+
+std::shared_ptr<LoxCallable>
+LoxFunction::bind(std::shared_ptr<LoxInstance> instance) {
+  auto env = std::make_shared<Environment>(closure_);
+  env->define("this", std::move(instance));
+  return std::make_shared<LoxFunction>(declaration_, std::move(env));
+}
+
+void LoxInstance::set(Token name, LiteralValue value) {
+  fields_[name.lexeme] = std::move(value);
 }

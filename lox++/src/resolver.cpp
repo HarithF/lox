@@ -52,6 +52,21 @@ LiteralValue Resolver::visit(Get &expr) {
   return std::monostate{};
 }
 
+LiteralValue Resolver::visit(Set &expr) {
+  resolve(*expr.value);
+  resolve(*expr.object);
+  return std::monostate{};
+}
+
+LiteralValue Resolver::visit(This &expr) {
+  if (current_class == ClassType::NONE) {
+    error_handler_.error(expr.keyword.line,
+                         "Cannot use 'this' outside of class");
+    return std::monostate{};
+  }
+  resolve_local(expr, expr.keyword);
+  return std::monostate{};
+}
 LiteralValue Resolver::visit(Grouping &expr) {
   resolve(*expr.expression);
 
@@ -108,8 +123,21 @@ void Resolver::visit(FuncStmt &stmt) {
 }
 
 void Resolver::visit(ClassStmt &stmt) {
+  auto enclosing_class = current_class;
+  current_class = ClassType::CLASS;
+
   declare(stmt.name);
   define(stmt.name);
+
+  beginScope();
+  scopes.top()["this"] = VarState::USED;
+
+  for (auto &method : stmt.methods) {
+    auto decl = FunctionType::METHOD;
+    resolve_function(*method, decl);
+  }
+  endScope();
+  current_class = enclosing_class;
 }
 
 void Resolver::visit(ExprStmt &stmt) { resolve(*stmt.expression); }

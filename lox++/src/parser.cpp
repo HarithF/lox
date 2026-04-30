@@ -27,7 +27,11 @@ ExprPtr Parser::assignment() {
 
     if (auto *var = dynamic_cast<Variable *>(expr.get())) {
       return std::make_unique<Assign>(var->name, std::move(value));
+    } else if (auto *var = dynamic_cast<Get *>(expr.get())) {
+      return std::make_unique<Set>(std::move(var->object), var->name,
+                                   std::move(value));
     }
+
     error(equals, "Invalid assignment target.");
   }
   return expr;
@@ -163,6 +167,9 @@ ExprPtr Parser::primary() {
     consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
     return std::make_unique<Grouping>(std::move(expr));
   }
+  case TokenType::THIS:
+    advance();
+    return std::make_unique<This>(previous());
   case TokenType::IDENTIFIER:
     advance();
     return std::make_unique<Variable>(previous());

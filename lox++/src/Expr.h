@@ -10,6 +10,8 @@ struct Get;
 struct Grouping;
 struct Literal;
 struct Logical;
+struct Set;
+struct This;
 struct Unary;
 struct Ternary;
 struct Variable;
@@ -22,6 +24,8 @@ struct ExprVisitor {
 	virtual LiteralValue visit(Grouping&) = 0;
 	virtual LiteralValue visit(Literal&) = 0;
 	virtual LiteralValue visit(Logical&) = 0;
+	virtual LiteralValue visit(Set&) = 0;
+	virtual LiteralValue visit(This&) = 0;
 	virtual LiteralValue visit(Unary&) = 0;
 	virtual LiteralValue visit(Ternary&) = 0;
 	virtual LiteralValue visit(Variable&) = 0;
@@ -115,6 +119,30 @@ struct Logical : public  Expr {
 
 	Logical(std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right)
 		: left(std::move(left)), operator_(operator_), right(std::move(right)) {}
+	LiteralValue accept(ExprVisitor& visitor) override {
+		return visitor.visit(*this);
+	}
+};
+struct Set : public  Expr {
+	std::unique_ptr<Expr> object;
+
+	Token name;
+
+	std::unique_ptr<Expr> value;
+
+
+	Set(std::unique_ptr<Expr> object, Token name, std::unique_ptr<Expr> value)
+		: object(std::move(object)), name(name), value(std::move(value)) {}
+	LiteralValue accept(ExprVisitor& visitor) override {
+		return visitor.visit(*this);
+	}
+};
+struct This : public  Expr {
+	Token keyword;
+
+
+	This(Token keyword)
+		: keyword(keyword) {}
 	LiteralValue accept(ExprVisitor& visitor) override {
 		return visitor.visit(*this);
 	}
