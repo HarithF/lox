@@ -70,6 +70,24 @@ LiteralValue Interpreter::visit(Set &expr) {
   throw RuntimeError(expr.name, "Only instances have fields.");
 }
 
+LiteralValue Interpreter::visit(Super &expr) {
+  int distance = locals.at(&expr);
+
+  auto sc = env_->get_at(distance, "super");
+  auto *callable = std::get_if<std::shared_ptr<LoxCallable>>(&sc);
+  auto *superclass = dynamic_cast<LoxClass *>(callable->get());
+
+  auto obj = env_->get_at(distance - 1, "this");
+  auto *instance = std::get_if<std::shared_ptr<LoxInstance>>(&obj);
+
+  auto method = superclass->find_method(expr.method.lexeme);
+  if (!method) {
+    throw RuntimeError(expr.method,
+                       "Undefined property '" + expr.method.lexeme + "'.");
+  }
+
+  return method->bind(*instance);
+}
 LiteralValue Interpreter::visit(This &expr) {
   return look_up_variable(expr.keyword, expr);
 }
@@ -239,14 +257,38 @@ void Interpreter::visit(ReturnStmt &stmt) {
 }
 
 void Interpreter::visit(ClassStmt &stmt) {
+
+  std::shared_ptr<LoxClass> superclass = nullptr;
+
+  if (stmt.superclass) {
+    auto value = evaluate(*stmt.superclass);
+    if (auto *sc = std::get_if<std::shared_ptr<LoxCallable>>(&value)) {
+      if (auto *lox_class = dynamic_cast<LoxClass *>(sc->get())) {
+        superclass = std::static_pointer_cast<LoxClass>(*sc);
+      } else {
+        throw RuntimeError(stmt.superclass->name,
+                           "Superclass must be a class.");
+      }
+    } else {
+      throw RuntimeError(stmt.superclass->name, "Superclass must be a class.");
+    }
+  }
   env_->define(stmt.name.lexeme, std::nullopt);
+
+  if (stmt.superclass) {
+    env_ = std::make_shared<Environment>(env_);
+    env_->define("super", superclass);
+  }
   std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods{};
   for (auto &method : stmt.methods) {
     auto function = std::make_shared<LoxFunction>(
         *method, env_, method->name.lexeme == "init");
     methods[method->name.lexeme] = std::move(function);
   }
-  auto klass = std::make_shared<LoxClass>(stmt.name.lexeme, std::move(methods));
+  auto klass = std::make_shared<LoxClass>(
+      stmt.name.lexeme, std::move(superclass), std::move(methods));
+  if (superclass)
+    env_ = env_->enclosing_;
   env_->assign(stmt.name, klass);
 }
 

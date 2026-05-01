@@ -35,6 +35,8 @@ std::shared_ptr<LoxFunction> LoxClass::find_method(const std::string name) {
   if (it != methods_.end()) {
     return it->second;
   }
+  if (superclass_)
+    return superclass_->find_method(name);
   return nullptr;
 }
 

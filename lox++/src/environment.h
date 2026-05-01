@@ -30,6 +30,8 @@ public:
 
 class Environment {
 public:
+  std::shared_ptr<Environment> enclosing_;
+
   Environment() : enclosing_(nullptr) {}
 
   Environment(std::shared_ptr<Environment> enclosing)
@@ -93,6 +95,5 @@ public:
   }
 
 private:
-  std::shared_ptr<Environment> enclosing_;
   std::unordered_map<std::string, std::optional<LiteralValue>> values;
 };

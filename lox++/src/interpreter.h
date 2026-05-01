@@ -27,6 +27,7 @@ struct Interpreter : ExprVisitor, StmtVisitor {
   LiteralValue visit(Call &expr) override;
   LiteralValue visit(Get &expr) override;
   LiteralValue visit(Set &expr) override;
+  LiteralValue visit(Super &expr) override;
   LiteralValue visit(This &expr) override;
   LiteralValue visit(Binary &expr) override;
   LiteralValue visit(Ternary &expr) override;

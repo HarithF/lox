@@ -11,6 +11,7 @@ try
           "Literal - LiteralValue value";
           "Logical - std::unique_ptr<Expr> left, Token operator_, std::unique_ptr<Expr> right";
           "Set - std::unique_ptr<Expr> object, Token name, std::unique_ptr<Expr> value";
+          "Super - Token keyword, Token method";
           "This - Token keyword";
           "Unary - Token operator_, std::unique_ptr<Expr> right";
           "Ternary - std::unique_ptr<Expr> cond_, std::unique_ptr<Expr> then_b, std::unique_ptr<Expr> else_b";
@@ -21,7 +22,7 @@ try
           ["BlockStmt - std::vector<std::unique_ptr<Stmt>> statements";
           "ExprStmt - std::unique_ptr<Expr> expression";
           "FuncStmt - Token name, std::vector<Token> params, std::vector<std::unique_ptr<Stmt>> body";
-          "ClassStmt - Token name, std::vector<std::unique_ptr<FuncStmt>> methods";
+          "ClassStmt - Token name, std::unique_ptr<Variable> superclass, std::vector<std::unique_ptr<FuncStmt>> methods";
           "IfStmt - std::unique_ptr<Expr> cond, std::unique_ptr<Stmt> then_b, std::unique_ptr<Stmt> else_b";
           "PrintStmt - std::unique_ptr<Expr> expression";
           "ReturnStmt - Token keyword, std::unique_ptr<Expr> value";

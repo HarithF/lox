@@ -62,12 +62,14 @@ struct LoxFunction : LoxCallable {
 
 struct LoxClass : LoxCallable {
   std::string name_;
+  std::shared_ptr<LoxClass> superclass_;
   std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods_;
 
   LoxClass(
-      std::string name,
+      std::string name, std::shared_ptr<LoxClass> superclass,
       std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods)
-      : name_(name), methods_(std::move(methods)) {}
+      : name_(name), superclass_(std::move(superclass)),
+        methods_(std::move(methods)) {}
 
   int arity() override;
 

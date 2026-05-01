@@ -3,7 +3,6 @@
 #include "Stmt.h"
 #include "lox_callable.h"
 #include "token.h"
-#include <fstream>
 #include <unordered_map>
 #include <variant>
 
@@ -55,6 +54,18 @@ LiteralValue Resolver::visit(Get &expr) {
 LiteralValue Resolver::visit(Set &expr) {
   resolve(*expr.value);
   resolve(*expr.object);
+  return std::monostate{};
+}
+
+LiteralValue Resolver::visit(Super &expr) {
+  if (current_class == ClassType::NONE) {
+    error_handler_.error(expr.keyword.line,
+                         "cannot use 'super' outside of a class");
+  } else if (current_class != ClassType::SUBCLASS) {
+    error_handler_.error(expr.keyword.line,
+                         "cannot use 'super' in a class with no superclass");
+  }
+  resolve_local(expr, expr.keyword);
   return std::monostate{};
 }
 
@@ -129,6 +140,17 @@ void Resolver::visit(ClassStmt &stmt) {
   declare(stmt.name);
   define(stmt.name);
 
+  if (stmt.superclass && (stmt.name.lexeme == stmt.superclass->name.lexeme))
+    error_handler_.error(stmt.superclass->name.line,
+                         "A class cannot inherit from itself.");
+
+  if (stmt.superclass) {
+    current_class = ClassType::SUBCLASS;
+    resolve(*stmt.superclass);
+    beginScope();
+    scopes.top()["super"] = VarState::USED;
+  }
+
   beginScope();
   scopes.top()["this"] = VarState::USED;
 
@@ -139,6 +161,8 @@ void Resolver::visit(ClassStmt &stmt) {
     resolve_function(*method, decl);
   }
   endScope();
+  if (stmt.superclass)
+    endScope();
   current_class = enclosing_class;
 }
 

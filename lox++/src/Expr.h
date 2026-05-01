@@ -11,6 +11,7 @@ struct Grouping;
 struct Literal;
 struct Logical;
 struct Set;
+struct Super;
 struct This;
 struct Unary;
 struct Ternary;
@@ -25,6 +26,7 @@ struct ExprVisitor {
 	virtual LiteralValue visit(Literal&) = 0;
 	virtual LiteralValue visit(Logical&) = 0;
 	virtual LiteralValue visit(Set&) = 0;
+	virtual LiteralValue visit(Super&) = 0;
 	virtual LiteralValue visit(This&) = 0;
 	virtual LiteralValue visit(Unary&) = 0;
 	virtual LiteralValue visit(Ternary&) = 0;
@@ -133,6 +135,18 @@ struct Set : public  Expr {
 
 	Set(std::unique_ptr<Expr> object, Token name, std::unique_ptr<Expr> value)
 		: object(std::move(object)), name(name), value(std::move(value)) {}
+	LiteralValue accept(ExprVisitor& visitor) override {
+		return visitor.visit(*this);
+	}
+};
+struct Super : public  Expr {
+	Token keyword;
+
+	Token method;
+
+
+	Super(Token keyword, Token method)
+		: keyword(keyword), method(method) {}
 	LiteralValue accept(ExprVisitor& visitor) override {
 		return visitor.visit(*this);
 	}

@@ -22,6 +22,7 @@ struct Resolver : ExprVisitor, StmtVisitor {
   LiteralValue visit(Call &) override;
   LiteralValue visit(Get &) override;
   LiteralValue visit(Set &) override;
+  LiteralValue visit(Super &) override;
   LiteralValue visit(This &) override;
   LiteralValue visit(Grouping &) override;
   LiteralValue visit(Literal &) override;
@@ -44,7 +45,7 @@ struct Resolver : ExprVisitor, StmtVisitor {
 
   enum class FunctionType { NONE, FUNCTION, INITIALIZER, METHOD };
   enum class VarState { DECLARED, DEFINED, USED };
-  enum class ClassType { NONE, CLASS };
+  enum class ClassType { NONE, CLASS, SUBCLASS };
 
 private:
   Interpreter &interpreter_;

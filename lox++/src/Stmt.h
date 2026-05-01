@@ -69,11 +69,13 @@ struct FuncStmt : public  Stmt {
 struct ClassStmt : public  Stmt {
 	Token name;
 
+	std::unique_ptr<Variable> superclass;
+
 	std::vector<std::unique_ptr<FuncStmt>> methods;
 
 
-	ClassStmt(Token name, std::vector<std::unique_ptr<FuncStmt>> methods)
-		: name(name), methods(std::move(methods)) {}
+	ClassStmt(Token name, std::unique_ptr<Variable> superclass, std::vector<std::unique_ptr<FuncStmt>> methods)
+		: name(name), superclass(std::move(superclass)), methods(std::move(methods)) {}
 	void accept(StmtVisitor& visitor) override {
 		visitor.visit(*this);
 	}
