@@ -134,6 +134,8 @@ void Resolver::visit(ClassStmt &stmt) {
 
   for (auto &method : stmt.methods) {
     auto decl = FunctionType::METHOD;
+    if (method->name.lexeme == "init")
+      decl = FunctionType::INITIALIZER;
     resolve_function(*method, decl);
   }
   endScope();
@@ -155,8 +157,12 @@ void Resolver::visit(ReturnStmt &stmt) {
   if (current_function_ == FunctionType::NONE)
     error_handler_.error(stmt.keyword.line,
                          "Can't return from top-level code.");
-  if (stmt.value)
+  if (stmt.value) {
+    if (current_function_ == FunctionType::INITIALIZER)
+      error_handler_.error(stmt.keyword.line,
+                           "Cannot return a vlaue from an initializer");
     resolve(*stmt.value);
+  }
 }
 
 void Resolver::visit(BreakStmt &stmt) {}

@@ -17,8 +17,12 @@ LiteralValue LoxFunction::call(Interpreter &interpreter,
   try {
     interpreter.execute_block(declaration_.body, env);
   } catch (ReturnException ret_value) {
+    if (is_initializer_)
+      return closure_->get_at(0, "this");
     return ret_value.value_;
   }
+  if (is_initializer_)
+    return closure_->get_at(0, "this");
   return std::monostate{};
 }
 
@@ -32,6 +36,22 @@ std::shared_ptr<LoxFunction> LoxClass::find_method(const std::string name) {
     return it->second;
   }
   return nullptr;
+}
+
+int LoxClass::arity() {
+  auto initializer = find_method("init");
+  if (!initializer)
+    return 0;
+  return initializer->arity();
+}
+
+LiteralValue LoxClass::call(Interpreter &interpreter,
+                            std::vector<LiteralValue> argumetns) {
+  auto instance = std::make_shared<LoxInstance>(this);
+  auto initializer = find_method("init");
+  if (initializer)
+    initializer->bind(instance)->call(interpreter, argumetns);
+  return instance;
 }
 
 LiteralValue LoxInstance::get(Token name) {
@@ -50,7 +70,8 @@ std::shared_ptr<LoxCallable>
 LoxFunction::bind(std::shared_ptr<LoxInstance> instance) {
   auto env = std::make_shared<Environment>(closure_);
   env->define("this", std::move(instance));
-  return std::make_shared<LoxFunction>(declaration_, std::move(env));
+  return std::make_shared<LoxFunction>(declaration_, std::move(env),
+                                       is_initializer_);
 }
 
 void LoxInstance::set(Token name, LiteralValue value) {

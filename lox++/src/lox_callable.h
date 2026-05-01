@@ -45,15 +45,20 @@ struct ClockCallable : LoxCallable {
 struct LoxFunction : LoxCallable {
   FuncStmt &declaration_;
   std::shared_ptr<Environment> closure_;
+  bool is_initializer_;
 
-  LoxFunction(FuncStmt &declaration, std::shared_ptr<Environment> closure)
-      : declaration_(declaration), closure_(std::move(closure)) {}
+  LoxFunction(FuncStmt &declaration, std::shared_ptr<Environment> closure,
+              bool is_initializer)
+      : declaration_(declaration), closure_(std::move(closure)),
+        is_initializer_(is_initializer) {}
   int arity() override;
   LiteralValue call(Interpreter &, std::vector<LiteralValue>) override;
   std::string to_string() const override;
 
   std::shared_ptr<LoxCallable> bind(std::shared_ptr<LoxInstance>);
 };
+
+// Lox Class
 
 struct LoxClass : LoxCallable {
   std::string name_;
@@ -64,11 +69,9 @@ struct LoxClass : LoxCallable {
       std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods)
       : name_(name), methods_(std::move(methods)) {}
 
-  int arity() override { return 0; }
+  int arity() override;
 
-  LiteralValue call(Interpreter &, std::vector<LiteralValue>) override {
-    return std::make_shared<LoxInstance>(this);
-  }
+  LiteralValue call(Interpreter &, std::vector<LiteralValue>) override;
 
   std::shared_ptr<LoxFunction> find_method(std::string name);
 

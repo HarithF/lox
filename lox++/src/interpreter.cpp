@@ -226,7 +226,7 @@ void Interpreter::visit(BlockStmt &stmt) {
 void Interpreter::visit(BreakStmt &) { throw BreakException{}; }
 
 void Interpreter::visit(FuncStmt &stmt) {
-  auto function = std::make_shared<LoxFunction>(stmt, env_);
+  auto function = std::make_shared<LoxFunction>(stmt, env_, false);
   env_->define(stmt.name.lexeme, function);
 }
 
@@ -242,7 +242,8 @@ void Interpreter::visit(ClassStmt &stmt) {
   env_->define(stmt.name.lexeme, std::nullopt);
   std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods{};
   for (auto &method : stmt.methods) {
-    auto function = std::make_shared<LoxFunction>(*method, env_);
+    auto function = std::make_shared<LoxFunction>(
+        *method, env_, method->name.lexeme == "init");
     methods[method->name.lexeme] = std::move(function);
   }
   auto klass = std::make_shared<LoxClass>(stmt.name.lexeme, std::move(methods));

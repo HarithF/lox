@@ -42,7 +42,7 @@ struct Resolver : ExprVisitor, StmtVisitor {
 
   void resolve(const std::vector<StmtPtr> &);
 
-  enum class FunctionType { NONE, FUNCTION, METHOD };
+  enum class FunctionType { NONE, FUNCTION, INITIALIZER, METHOD };
   enum class VarState { DECLARED, DEFINED, USED };
   enum class ClassType { NONE, CLASS };
 
