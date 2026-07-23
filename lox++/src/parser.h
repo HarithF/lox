@@ -41,7 +41,7 @@ public:
 
 private:
   std::vector<Token> tokens_;
-  ErrorHandler error_handler_;
+  ErrorHandler &error_handler_;
   int curr = 0;
   int loop_depth_ = 0;
 

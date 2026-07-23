@@ -49,7 +49,7 @@ struct Resolver : ExprVisitor, StmtVisitor {
 
 private:
   Interpreter &interpreter_;
-  ErrorHandler error_handler_;
+  ErrorHandler &error_handler_;
   ClassType current_class = ClassType::NONE;
 
   std::stack<std::unordered_map<std::string, VarState>> scopes{};
