@@ -28,6 +28,11 @@ void disassembleChunk(Chunk *chunk, const char *name) {
 
 int disassembleInstruction(Chunk *chunk, int offset) {
   printf("%04d ", offset);
+  if (offset > 0 && getLine(chunk, offset - 1) == getLine(chunk, offset)) {
+    printf("   | ");
+  } else {
+    printf("%4d ", getLine(chunk, offset));
+  }
   uint8_t instruction = chunk->code[offset];
   switch (instruction) {
   case OP_CONSTANT:
