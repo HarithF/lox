@@ -7,9 +7,21 @@
 #include "vm.h"
 #include <stdint.h>
 
-void initVM(VM *vm) {}
+static void resetStack(VM *vm) { vm->stackTop = vm->stack; }
+
+void initVM(VM *vm) { resetStack(vm); }
 
 void freeVM(VM *vm) {}
+
+void push(Value val, VM *vm) {
+  *vm->stackTop = val;
+  vm->stackTop++;
+}
+
+Value pop(VM *vm) {
+  vm->stackTop--;
+  return *vm->stackTop;
+}
 
 static InterpretResult run(VM *vm) {
 #define READ_BYTE() (*vm->ip++)
@@ -17,6 +29,13 @@ static InterpretResult run(VM *vm) {
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
+    printf("          ");
+    for (Value *slot = vm->stack; slot < vm->stackTop; slot++) {
+      printf("[ ");
+      printValue(*slot);
+      printf(" ]");
+    }
+    printf("\n");
     disassembleInstruction(vm->chunk, (int)(vm->ip - vm->chunk->code));
 #endif
 
@@ -24,11 +43,14 @@ static InterpretResult run(VM *vm) {
     switch (instruction = READ_BYTE()) {
     case OP_CONSTANT: {
       Value constant = READ_CONSTANT();
-      printValue(constant);
-      printf("\n");
+      push(constant, vm);
       break;
     }
+    case OP_NEGATE:
+      push(-pop(vm), vm);
     case OP_RETURN: {
+      printValue(pop(vm));
+      printf("\n");
       return INTERPRET_OK;
     }
     }
