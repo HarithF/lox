@@ -1,11 +1,11 @@
-#include <stdio.h>
-
+#include "vm.h"
 #include "chunk.h"
 #include "common.h"
+#include "compiler.h"
 #include "debug.h"
 #include "value.h"
-#include "vm.h"
 #include <stdint.h>
+#include <stdio.h>
 
 static void resetStack(VM *vm) { vm->stackTop = vm->stack; }
 
@@ -79,9 +79,8 @@ static InterpretResult run(VM *vm) {
 #undef BINARY_OP
 }
 
-InterpretResult interpret(Chunk *chunk, VM *vm) {
-  vm->chunk = chunk;
-  vm->ip = vm->chunk->code;
+InterpretResult interpret(const char *source, VM *vm) {
+  compile(source, vm);
 
-  return run(vm);
+  return INTERPRET_OK;
 }
