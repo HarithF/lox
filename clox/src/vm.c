@@ -80,6 +80,7 @@ static InterpretResult run(VM *vm) {
 }
 
 InterpretResult interpret(const char *source, VM *vm) {
+
   compile(source, vm);
 
   return INTERPRET_OK;
