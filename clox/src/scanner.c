@@ -170,7 +170,7 @@ static Token identifier(Scanner *scanner) {
   while (isAlpha(peek(scanner)) || isDigit(peek(scanner))) {
     advance(scanner);
   }
-  return makeToken(identifierType(), scanner);
+  return makeToken(identifierType(scanner), scanner);
 }
 
 static Token number(Scanner *scanner) {
@@ -238,6 +238,10 @@ Token scanToken(Scanner *scanner) {
     return makeToken(TOKEN_SLASH, scanner);
   case '*':
     return makeToken(TOKEN_STAR, scanner);
+  case '?':
+    return makeToken(TOKEN_QUESTION, scanner);
+  case ':':
+    return makeToken(TOKEN_COLON, scanner);
   case '!':
     return makeToken(match('=', scanner) ? TOKEN_BANG_EQUAL : TOKEN_BANG,
                      scanner);

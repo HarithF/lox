@@ -66,6 +66,7 @@ static InterpretResult run(VM *vm) {
       break;
     case OP_NEGATE:
       push(-pop(vm), vm);
+      break;
     case OP_RETURN: {
       printValue(pop(vm));
       printf("\n");
