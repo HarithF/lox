@@ -3,11 +3,15 @@
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
+#include "memory.h"
+#include "object.h"
 #include "value.h"
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 static void resetStack(VM *vm) { vm->stackTop = vm->stack; }
 
@@ -23,9 +27,12 @@ static void runtimeError(VM *vm, const char *format, ...) {
   resetStack(vm);
 }
 
-void initVM(VM *vm) { resetStack(vm); }
+void initVM(VM *vm) {
+  resetStack(vm);
+  vm->objects = NULL;
+}
 
-void freeVM(VM *vm) {}
+void freeVM(VM *vm) { freeObjects(vm); }
 
 void push(Value val, VM *vm) {
   *vm->stackTop = val;
@@ -41,6 +48,20 @@ static Value peek(int distance, VM *vm) { return vm->stackTop[-1 - distance]; }
 
 static bool isFalsey(Value val) {
   return IS_NIL(val) || (IS_BOOL(val) && !AS_BOOL(val));
+}
+
+static void concatenate(VM *vm) {
+  ObjString *b = AS_STRING(pop(vm));
+  ObjString *a = AS_STRING(pop(vm));
+
+  int length = a->length + b->length;
+  char *chars = ALLOCATE(char, length + 1);
+  memcpy(chars, a->chars, a->length);
+  memcpy(chars + a->length, b->chars, b->length);
+  chars[length] = '\0';
+
+  ObjString *result = takeString(chars, length, vm);
+  push(OBJ_VAL(result), vm);
 }
 
 static InterpretResult run(VM *vm) {
@@ -99,7 +120,17 @@ static InterpretResult run(VM *vm) {
       BINARY_OP(BOOL_VAL, <);
       break;
     case OP_ADD:
-      BINARY_OP(NUMBER_VAL, +);
+      if (IS_STRING(peek(0, vm)) && IS_STRING(peek(1, vm))) {
+        concatenate(vm);
+      } else if (IS_NUMBER(peek(0, vm)) && IS_NUMBER(peek(1, vm))) {
+        double b = AS_NUMBER(pop(vm));
+        double a = AS_NUMBER(pop(vm));
+        push(NUMBER_VAL(a + b), vm);
+      } else {
+        runtimeError(vm, "Operands must be two numbers or two strings.");
+        return INTERPRET_RINTIME_ERROR;
+      }
+      break;
       break;
     case OP_SUBTRACT:
       BINARY_OP(NUMBER_VAL, -);
@@ -137,7 +168,7 @@ InterpretResult interpret(const char *source, VM *vm) {
 
   Chunk chunk;
   initChunk(&chunk);
-  if (!compile(source, &chunk)) {
+  if (!compile(source, &chunk, vm)) {
     freeChunk(&chunk);
     return INTERPRET_COMPILE_ERROR;
   }

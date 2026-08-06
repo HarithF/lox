@@ -191,6 +191,7 @@ static Token string(Scanner *scanner) {
     if (match('\n', scanner)) {
       scanner->line++;
     }
+    advance(scanner);
   }
   if (isAtEnd(scanner)) {
     return errorToken("Unterminated string.", scanner);

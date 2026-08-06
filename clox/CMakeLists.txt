@@ -16,6 +16,7 @@ add_executable(clox
     src/vm.c
     src/compiler.c
     src/scanner.c
+    src/object.c
 )
 
 target_include_directories(clox PRIVATE
