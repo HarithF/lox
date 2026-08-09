@@ -41,7 +41,7 @@ ObjString *takeString(char *chars, int length, VM *vm) {
   uint32_t hash = hashString(chars, length);
   ObjString *interned = tableFindString(&vm->strings, chars, length, hash);
   if (interned != NULL) {
-    FREE_ARRAY(char, chars, lenght + 1);
+    FREE_ARRAY(char, chars, length + 1);
     return interned;
   }
 

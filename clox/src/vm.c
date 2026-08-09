@@ -112,6 +112,10 @@ static InterpretResult run(VM *vm) {
       push(BOOL_VAL(true), vm);
       break;
 
+    case OP_POP:
+      pop(vm);
+      break;
+
     case OP_EQUAL: {
       Value b = pop(vm);
       Value a = pop(vm);
@@ -156,9 +160,14 @@ static InterpretResult run(VM *vm) {
       }
       push(NUMBER_VAL(-AS_NUMBER(pop(vm))), vm);
       break;
-    case OP_RETURN: {
+
+    case OP_PRINT: {
       printValue(pop(vm));
       printf("\n");
+      break;
+    }
+    case OP_RETURN: {
+
       return INTERPRET_OK;
     }
     }
