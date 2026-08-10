@@ -37,11 +37,14 @@ typedef struct {
 } ParseRule;
 
 // forward decl:
-static void expression(Compiler *compiler);
-static void declaration(Compiler *compiler);
-static void statement(Compiler *compiler);
-static ParseRule *getRule(TokenType type);
-static void parsePrecedence(Precedence precedence, Compiler *compiler);
+static void expression(Compiler *);
+static void declaration(Compiler *);
+static void statement(Compiler *);
+static ParseRule *getRule(TokenType);
+static void parsePrecedence(Precedence, Compiler *);
+static void defineVariable(uint8_t, Compiler *);
+static uint8_t parseVariable(const char *, Compiler *);
+static uint8_t identifierConstant(Compiler *);
 
 // helpers:
 
@@ -238,6 +241,18 @@ static void string(Compiler *compiler) {
       compiler);
 }
 
+static void namedVariable(Compiler *compiler) {
+  uint8_t arg = identifierConstant(compiler);
+  if (compiler->canAssign && match(TOKEN_EQUAL, compiler)) {
+    expression(compiler);
+    emitBytes(OP_SET_GLOBAL, arg, compiler);
+  } else {
+    emitBytes(OP_GET_GLOBAL, arg, compiler);
+  }
+}
+
+static void variable(Compiler *compiler) { namedVariable(compiler); }
+
 static void grouping(Compiler *compiler) {
   expression(compiler);
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.", compiler);
@@ -245,6 +260,19 @@ static void grouping(Compiler *compiler) {
 
 static void expression(Compiler *compiler) {
   parsePrecedence(PREC_ASSIGNMENT, compiler);
+}
+
+static void varDeclaration(Compiler *compiler) {
+  uint8_t global = parseVariable("Expect variable name.", compiler);
+
+  if (match(TOKEN_EQUAL, compiler)) {
+    expression(compiler);
+  } else {
+    emitByte(OP_NIL, compiler);
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.", compiler);
+
+  defineVariable(global, compiler);
 }
 
 static void expressionStatement(Compiler *compiler) {
@@ -281,8 +309,11 @@ static void synchronize(Compiler *compiler) {
 }
 
 static void declaration(Compiler *compiler) {
-
-  statement(compiler);
+  if (match(TOKEN_VAR, compiler)) {
+    varDeclaration(compiler);
+  } else {
+    statement(compiler);
+  }
   if (compiler->parser.panicMode)
     synchronize(compiler);
   ;
@@ -316,7 +347,7 @@ ParseRule rules[] = {
     [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_COMPARISON},
-    [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_NONE},
+    [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
     [TOKEN_AND] = {NULL, NULL, PREC_NONE},
@@ -348,6 +379,7 @@ static void parsePrecedence(Precedence precedence, Compiler *compiler) {
     return;
   }
 
+  compiler->canAssign = precedence <= PREC_ASSIGNMENT;
   prefixRule(compiler);
 
   while (precedence <= getRule(compiler->parser.current.type)->precedence) {
@@ -355,6 +387,24 @@ static void parsePrecedence(Precedence precedence, Compiler *compiler) {
     ParseFn infixRule = getRule(compiler->parser.previous.type)->infix;
     infixRule(compiler);
   }
+  if (compiler->canAssign && match(TOKEN_EQUAL, compiler)) {
+    error("Invalid assignment target", compiler);
+  }
+}
+
+static uint8_t identifierConstant(Compiler *compiler) {
+  Token name = compiler->parser.previous;
+  return makeConstant(
+      OBJ_VAL(copyString(name.start, name.length, compiler->vm)), compiler);
+}
+
+static uint8_t parseVariable(const char *errorMsg, Compiler *compiler) {
+  consume(TOKEN_IDENTIFIER, errorMsg, compiler);
+  return identifierConstant(compiler);
+}
+
+static void defineVariable(uint8_t global, Compiler *compiler) {
+  emitBytes(OP_DEFINE_GLOBAL, global, compiler);
 }
 
 static ParseRule *getRule(TokenType type) { return &rules[type]; }

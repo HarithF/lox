@@ -17,6 +17,7 @@ typedef struct {
   Parser parser;
   Chunk *chunk;
   VM *vm;
+  bool canAssign;
 } Compiler;
 
 bool compile(const char *source, Chunk *chunk, VM *vm);
