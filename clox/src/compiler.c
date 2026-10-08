@@ -70,19 +70,17 @@ static void errorAt(Token *tok, const char *msg, Compiler *compiler) {
   } else if (tok->type == TOKEN_ERROR) {
     // nothing
   } else {
-    fprintf(stderr, " at '%*s'", tok->length, tok->start);
+    fprintf(stderr, " at '%.*s'", tok->length, tok->start);
   }
   fprintf(stderr, ": %s\n", msg);
   compiler->parser.hadError = true;
 }
 
 static void error(const char *msg, Compiler *compiler) {
-  errorAt(&compiler->parser.current, msg, compiler);
+  errorAt(&compiler->parser.previous, msg, compiler);
 }
 
-static void errorAtCurrent(Compiler *compiler) {
-  const char *msg = compiler->parser.current.start;
-
+static void errorAtCurrent(const char *msg, Compiler *compiler) {
   errorAt(&compiler->parser.current, msg, compiler);
 }
 static void advance(Compiler *compiler) {
@@ -93,7 +91,7 @@ static void advance(Compiler *compiler) {
     if (compiler->parser.current.type != TOKEN_ERROR)
       break;
 
-    errorAtCurrent(compiler);
+    errorAtCurrent(compiler->parser.current.start, compiler);
   }
 }
 
@@ -102,7 +100,7 @@ static void consume(TokenType type, const char *msg, Compiler *compiler) {
     advance(compiler);
     return;
   }
-  errorAtCurrent(compiler);
+  errorAtCurrent(msg, compiler);
 }
 
 static bool check(TokenType type, Parser *parser) {
@@ -125,6 +123,24 @@ static void emitBytes(uint8_t byte1, uint8_t byte2, Compiler *compiler) {
   emitByte(byte2, compiler);
 }
 
+static int emitJump(uint8_t instruction, Compiler *compiler) {
+  emitByte(instruction, compiler);
+  emitByte(0xff, compiler);
+  emitByte(0xff, compiler);
+  return compiler->chunk->count - 2;
+}
+
+static void patchJump(int offset, Compiler *compiler) {
+  int jump = compiler->chunk->count - offset -
+             2; // -2 to adjust for the bytecode for the jump offset
+
+  if (jump > UINT16_MAX) {
+    error("Too much code to jump over.", compiler);
+  }
+
+  compiler->chunk->code[offset] = (jump >> 8) & 0xff;
+  compiler->chunk->code[offset + 1] = jump & 0xff;
+}
 static void emitReturn(Compiler *compiler) { emitByte(OP_RETURN, compiler); }
 
 static uint8_t makeConstant(Value value, Compiler *compiler) {
@@ -319,6 +335,24 @@ static void expressionStatement(Compiler *compiler) {
   emitByte(OP_POP, compiler);
 }
 
+static void ifStatement(Compiler *compiler) {
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if;.", compiler);
+  expression(compiler);
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition", compiler);
+
+  int thenJump = emitJump(OP_JUMP_IF_FALSE, compiler);
+  emitByte(OP_POP, compiler);
+  statement(compiler);
+
+  int elseJump = emitJump(OP_JUMP, compiler);
+  patchJump(thenJump, compiler);
+  emitByte(OP_POP, compiler);
+
+  if (match(TOKEN_ELSE, compiler))
+    statement(compiler);
+  patchJump(elseJump, compiler);
+}
+
 static void printStatement(Compiler *compiler) {
   expression(compiler);
   consume(TOKEN_SEMICOLON, "Expect ';' after value.", compiler);
@@ -360,6 +394,8 @@ static void declaration(Compiler *compiler) {
 static void statement(Compiler *compiler) {
   if (match(TOKEN_PRINT, compiler)) {
     printStatement(compiler);
+  } else if (match(TOKEN_IF, compiler)) {
+    ifStatement(compiler);
   } else if (match(TOKEN_LEFT_BRACE, compiler)) {
     beginScope(compiler);
     block(compiler);
