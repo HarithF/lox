@@ -124,6 +124,17 @@ static void emitBytes(uint8_t byte1, uint8_t byte2, Compiler *compiler) {
   emitByte(byte2, compiler);
 }
 
+static void emitLoop(int loopStart, Compiler *compiler) {
+  emitByte(OP_LOOP, compiler);
+
+  int offset = compiler->chunk->count - loopStart + 2;
+  if (offset > UINT16_MAX)
+    error("Loop body too large.", compiler);
+
+  emitByte((offset >> 8) & 0xff, compiler);
+  emitByte(offset & 0xff, compiler);
+}
+
 static int emitJump(uint8_t instruction, Compiler *compiler) {
   emitByte(instruction, compiler);
   emitByte(0xff, compiler);
@@ -387,6 +398,22 @@ static void printStatement(Compiler *compiler) {
   emitByte(OP_PRINT, compiler);
 }
 
+static void whileStatement(Compiler *compiler) {
+  int loopStart = compiler->chunk->count;
+
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while.", compiler);
+  expression(compiler);
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition", compiler);
+
+  int exitJump = emitJump(OP_JUMP_IF_FALSE, compiler);
+  emitJump(OP_POP, compiler);
+  statement(compiler);
+  emitLoop(loopStart, compiler);
+
+  patchJump(exitJump, compiler);
+  emitByte(OP_POP, compiler);
+}
+
 static void synchronize(Compiler *compiler) {
   compiler->parser.panicMode = false;
   while (compiler->parser.current.type != TOKEN_EOF) {
@@ -424,6 +451,8 @@ static void statement(Compiler *compiler) {
     printStatement(compiler);
   } else if (match(TOKEN_IF, compiler)) {
     ifStatement(compiler);
+  } else if (match(TOKEN_WHILE, compiler)) {
+    whileStatement(compiler);
   } else if (match(TOKEN_LEFT_BRACE, compiler)) {
     beginScope(compiler);
     block(compiler);
