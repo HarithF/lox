@@ -46,6 +46,7 @@ static void statement(Compiler *);
 static ParseRule *getRule(TokenType);
 static void parsePrecedence(Precedence, Compiler *);
 static void defineVariable(uint8_t, Compiler *);
+static void and_(Compiler *);
 static uint8_t parseVariable(const char *, Compiler *);
 static uint8_t identifierConstant(Compiler *);
 static int resolveLocal(Compiler *, Token *);
@@ -241,18 +242,45 @@ static void binary(Compiler *compiler) {
 }
 
 static void ternary(Compiler *compiler) {
-  // left operand (condition) is already compiled
+  // condition is already on the stack
+  int elseJump = emitJump(OP_JUMP_IF_FALSE, compiler);
+  emitByte(OP_POP, compiler); // pop condition (then path)
+  expression(compiler);       // parse thenExpr
 
-  expression(compiler); // parse thenExpr
+  int endJump = emitJump(OP_JUMP, compiler);
 
-  consume(TOKEN_COLON, "Expect : after ternary operator ?", compiler);
+  consume(TOKEN_COLON, "Expect ':' after then branch of ternary.", compiler);
 
+  patchJump(elseJump, compiler);
+  emitByte(OP_POP, compiler);                  // pop condition (else path)
   parsePrecedence(PREC_CONDITIONAL, compiler); // parse elseExpr
+  patchJump(endJump, compiler);
 }
 
 static void number(Compiler *compiler) {
   double value = strtod(compiler->parser.previous.start, NULL);
   emitConstat(NUMBER_VAL(value), compiler);
+}
+
+static void or_(Compiler *compiler) {
+
+  int elseJump = emitJump(OP_JUMP_IF_FALSE, compiler);
+  int endJump = emitJump(OP_JUMP, compiler);
+
+  patchJump(elseJump, compiler);
+  emitByte(OP_POP, compiler);
+
+  parsePrecedence(PREC_OR, compiler);
+  patchJump(endJump, compiler);
+}
+
+static void and_(Compiler *compiler) {
+  int endJump = emitJump(OP_JUMP_IF_FALSE, compiler);
+
+  emitByte(OP_POP, compiler);
+  parsePrecedence(PREC_AND, compiler);
+
+  patchJump(endJump, compiler);
 }
 
 static void literal(Compiler *compiler) {
@@ -428,7 +456,7 @@ ParseRule rules[] = {
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
-    [TOKEN_AND] = {NULL, NULL, PREC_NONE},
+    [TOKEN_AND] = {NULL, and_, PREC_AND},
     [TOKEN_CLASS] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
@@ -436,7 +464,7 @@ ParseRule rules[] = {
     [TOKEN_FUN] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
-    [TOKEN_OR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_OR] = {NULL, or_, PREC_OR},
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
@@ -539,9 +567,10 @@ static void markInitialized(Compiler *compiler) {
 }
 
 static void defineVariable(uint8_t global, Compiler *compiler) {
-  if (compiler->scoper.scopeDepth > 0)
+  if (compiler->scoper.scopeDepth > 0) {
     markInitialized(compiler);
-  return;
+    return;
+  }
   emitBytes(OP_DEFINE_GLOBAL, global, compiler);
 }
 
