@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -374,6 +375,18 @@ static void expressionStatement(Compiler *compiler) {
   emitByte(OP_POP, compiler);
 }
 
+static void forStatement(Compiler *compiler) {
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'", compiler);
+  consume(TOKEN_SEMICOLON, "Expect ';'", compiler);
+
+  int loopStart = compiler->chunk->count;
+  consume(TOKEN_SEMICOLON, "Expect ';'", compiler);
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.", compiler);
+
+  statement(compiler);
+  emitLoop(loopStart, compiler);
+}
+
 static void ifStatement(Compiler *compiler) {
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if;.", compiler);
   expression(compiler);
@@ -449,6 +462,8 @@ static void declaration(Compiler *compiler) {
 static void statement(Compiler *compiler) {
   if (match(TOKEN_PRINT, compiler)) {
     printStatement(compiler);
+  } else if (match(TOKEN_FOR, compiler)) {
+    forStatement(compiler);
   } else if (match(TOKEN_IF, compiler)) {
     ifStatement(compiler);
   } else if (match(TOKEN_WHILE, compiler)) {
