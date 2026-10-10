@@ -376,15 +376,44 @@ static void expressionStatement(Compiler *compiler) {
 }
 
 static void forStatement(Compiler *compiler) {
+  beginScope(compiler);
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'", compiler);
-  consume(TOKEN_SEMICOLON, "Expect ';'", compiler);
-
+  if (match(TOKEN_SEMICOLON, compiler)){
+    //no initializer
+  } else if (match(TOKEN_VAR, compiler)){
+    varDeclaration(compiler);
+  } else {
+    expressionStatement(compiler);
+  }
   int loopStart = compiler->chunk->count;
-  consume(TOKEN_SEMICOLON, "Expect ';'", compiler);
-  consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.", compiler);
+  int exitJump = -1;
+  if(!match(TOKEN_SEMICOLON, compiler)){
+    expression(compiler);
+    consume(TOKEN_SEMICOLON, "Expect ';'", compiler);
+    
+    //jump out of the loop 
+    exitJump = emitJump(OP_JUMP_IF_FALSE, compiler);
+    emitByte(OP_POP, compiler);
+  }
 
+  if (!match(TOKEN_RIGHT_PAREN, compiler)){
+    int bodyJump = emitJump(OP_JUMP, compiler);
+    int incrementStart = compiler->chunk->count;
+
+    expression(compiler);
+    emitByte(OP_POP, compiler);
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.", compiler);
+
+    emitLoop(loopStart, compiler);
+    patchJump(bodyJump, compiler);
+  }
   statement(compiler);
   emitLoop(loopStart, compiler);
+  if (exitJump = -1){
+    patchJump(exitJump, compiler);
+    emitByte(OP_POP, compiler); // condition
+  }
+  endScope(compiler);
 }
 
 static void ifStatement(Compiler *compiler) {
