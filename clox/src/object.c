@@ -7,6 +7,7 @@
 #include "object.h"
 #include "table.h"
 #include "value.h"
+#include "vm.h"
 
 #define ALLOCATE_OBJ(type, objectType, vm)                                     \
   (type *)allocateObject(sizeof(type), objectType, vm)

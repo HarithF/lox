@@ -14,7 +14,10 @@
 #include <stdio.h>
 #include <string.h>
 
-static void resetStack(VM *vm) { vm->stackTop = vm->stack; }
+static void resetStack(VM *vm) {
+  vm->stackTop = vm->stack;
+  vm->frameCount = 0;
+}
 
 static void runtimeError(VM *vm, const char *format, ...) {
   va_list args;
@@ -22,8 +25,9 @@ static void runtimeError(VM *vm, const char *format, ...) {
   vfprintf(stderr, format, args);
   va_end(args);
 
-  size_t instruction = vm->ip - vm->chunk->code - 1;
-  int line = getLine(vm->chunk, instruction);
+  CallFrame *frame = &vm->frames[vm->frameCount - 1];
+  size_t instruction = frame->ip - frame->function->chunk.code - 1;
+  int line = getLine(&frame->function->chunk, instruction);
   fprintf(stderr, "[line %d] in script\n", line);
   resetStack(vm);
 }
@@ -72,10 +76,13 @@ static void concatenate(VM *vm) {
 }
 
 static InterpretResult run(VM *vm) {
-#define READ_BYTE() (*vm->ip++)
-#define READ_CONSTANT() (vm->chunk->constants.values[READ_BYTE()])
+
+  CallFrame *frame = &vm->frames[vm->frameCount - 1];
+#define READ_BYTE() (*frame->ip++)
+#define READ_CONSTANT() (frame->function->chunk.constants.values[READ_BYTE()])
 #define READ_STRING() (AS_STRING(READ_CONSTANT()))
-#define READ_SHORT() (vm->ip += 2, (uint16_t)((vm->ip[-2] << 8) | vm->ip[-1]))
+#define READ_SHORT()                                                           \
+  (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 #define BINARY_OP(valueType, op)                                               \
   do {                                                                         \
     if (!IS_NUMBER(peek(0, vm)) || !IS_NUMBER(peek(1, vm))) {                  \
@@ -96,7 +103,8 @@ static InterpretResult run(VM *vm) {
       printf(" ]");
     }
     printf("\n");
-    disassembleInstruction(vm->chunk, (int)(vm->ip - vm->chunk->code));
+    disassembleInstruction(&frame->function->chunk,
+                           (int)(frame->ip - frame->function->chunk.code));
 #endif
 
     uint8_t instruction;
@@ -122,7 +130,7 @@ static InterpretResult run(VM *vm) {
 
     case OP_GET_LOCAL: {
       uint8_t slot = READ_BYTE();
-      push(vm->stack[slot], vm);
+      push(frame->slots[slot], vm);
       break;
     }
 
@@ -146,7 +154,7 @@ static InterpretResult run(VM *vm) {
 
     case OP_SET_LOCAL: {
       uint8_t slot = READ_BYTE();
-      vm->stack[slot] = peek(0, vm);
+      frame->slots[slot] = peek(0, vm);
       break;
     }
     case OP_SET_GLOBAL: {
@@ -211,19 +219,19 @@ static InterpretResult run(VM *vm) {
     }
     case OP_JUMP: {
       uint16_t offset = READ_SHORT();
-      vm->ip += offset;
+      frame->ip += offset;
       break;
     }
     case OP_JUMP_IF_FALSE: {
       uint16_t offset = READ_SHORT();
       if (isFalsey(peek(0, vm)))
-        vm->ip += offset;
+        frame->ip += offset;
 
       break;
     }
     case OP_LOOP: {
       uint16_t offset = READ_SHORT();
-      vm->ip -= offset;
+      frame->ip -= offset;
       break;
     }
     case OP_RETURN: {
@@ -245,11 +253,11 @@ InterpretResult interpret(const char *source, VM *vm) {
   if (function == NULL)
     return INTERPRET_COMPILE_ERROR;
 
-  // Temporary until call frames: the script function occupies stack slot 0,
-  // matching the slot the compiler reserves for it.
   push(OBJ_VAL(function), vm);
-  vm->chunk = &function->chunk;
-  vm->ip = vm->chunk->code;
+  CallFrame *frame = &vm->frames[vm->frameCount++];
+  frame->function = function;
+  frame->ip = function->chunk.code;
+  frame->slots = vm->stack;
 
   return run(vm);
 }
