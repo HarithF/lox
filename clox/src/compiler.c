@@ -116,8 +116,12 @@ static bool match(TokenType type, Compiler *compiler) {
   return true;
 }
 
+static Chunk *currentChunk(Compiler *compiler) {
+  return &compiler->scoper->function->chunk;
+}
+
 static void emitByte(uint8_t byte, Compiler *compiler) {
-  writeChunk(compiler->chunk, byte, compiler->parser.previous.line);
+  writeChunk(currentChunk(compiler), byte, compiler->parser.previous.line);
 }
 
 static void emitBytes(uint8_t byte1, uint8_t byte2, Compiler *compiler) {
@@ -128,7 +132,7 @@ static void emitBytes(uint8_t byte1, uint8_t byte2, Compiler *compiler) {
 static void emitLoop(int loopStart, Compiler *compiler) {
   emitByte(OP_LOOP, compiler);
 
-  int offset = compiler->chunk->count - loopStart + 2;
+  int offset = currentChunk(compiler)->count - loopStart + 2;
   if (offset > UINT16_MAX)
     error("Loop body too large.", compiler);
 
@@ -140,24 +144,24 @@ static int emitJump(uint8_t instruction, Compiler *compiler) {
   emitByte(instruction, compiler);
   emitByte(0xff, compiler);
   emitByte(0xff, compiler);
-  return compiler->chunk->count - 2;
+  return currentChunk(compiler)->count - 2;
 }
 
 static void patchJump(int offset, Compiler *compiler) {
-  int jump = compiler->chunk->count - offset -
+  int jump = currentChunk(compiler)->count - offset -
              2; // -2 to adjust for the bytecode for the jump offset
 
   if (jump > UINT16_MAX) {
     error("Too much code to jump over.", compiler);
   }
 
-  compiler->chunk->code[offset] = (jump >> 8) & 0xff;
-  compiler->chunk->code[offset + 1] = jump & 0xff;
+  currentChunk(compiler)->code[offset] = (jump >> 8) & 0xff;
+  currentChunk(compiler)->code[offset + 1] = jump & 0xff;
 }
 static void emitReturn(Compiler *compiler) { emitByte(OP_RETURN, compiler); }
 
 static uint8_t makeConstant(Value value, Compiler *compiler) {
-  int constant = addConstant(compiler->chunk, value);
+  int constant = addConstant(currentChunk(compiler), value);
   if (constant > UINT8_MAX) {
     error("Too many constants in one chunk", compiler);
     return 0;
@@ -169,29 +173,44 @@ static void emitConstat(Value value, Compiler *compiler) {
   emitBytes(OP_CONSTANT, makeConstant(value, compiler), compiler);
 }
 
-void initCompiler(Compiler *compiler) {
-  compiler->scoper.localCount = 0;
-  compiler->scoper.scopeDepth = 0;
+static void initScoper(Scoper *scoper, FunctionType type, Compiler *compiler) {
+  scoper->enclosing = compiler->scoper;
+  scoper->type = type;
+  scoper->localCount = 0;
+  scoper->scopeDepth = 0;
+  scoper->function = newFunction(compiler->vm);
+  compiler->scoper = scoper;
+
+  Local *local = &scoper->locals[scoper->localCount++];
+  local->depth = 0;
+  local->name.start = "";
+  local->name.length = 0;
 }
 
-static void endCompiler(Compiler *compiler) {
+static ObjFunction *endCompiler(Compiler *compiler) {
   emitReturn(compiler);
+  ObjFunction *function = compiler->scoper->function;
 #ifdef DEBUG_PRINT_CODE
   if (!compiler->parser.hadError) {
-    disassembleChunk(compiler->chunk, "code");
+    disassembleChunk(currentChunk(compiler), function->name != NULL
+                                                 ? function->name->chars
+                                                 : "<script>");
   }
 #endif
+
+  compiler->scoper = compiler->scoper->enclosing;
+  return function;
 }
 
-static void beginScope(Compiler *compiler) { compiler->scoper.scopeDepth++; }
+static void beginScope(Compiler *compiler) { compiler->scoper->scopeDepth++; }
 
 static void endScope(Compiler *compiler) {
-  compiler->scoper.scopeDepth--;
-  while (compiler->scoper.localCount > 0 &&
-         compiler->scoper.locals[compiler->scoper.localCount - 1].depth >
-             compiler->scoper.scopeDepth) {
+  compiler->scoper->scopeDepth--;
+  while (compiler->scoper->localCount > 0 &&
+         compiler->scoper->locals[compiler->scoper->localCount - 1].depth >
+             compiler->scoper->scopeDepth) {
     emitByte(OP_POP, compiler);
-    compiler->scoper.localCount--;
+    compiler->scoper->localCount--;
   }
 }
 
@@ -378,38 +397,39 @@ static void expressionStatement(Compiler *compiler) {
 static void forStatement(Compiler *compiler) {
   beginScope(compiler);
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'", compiler);
-  if (match(TOKEN_SEMICOLON, compiler)){
-    //no initializer
-  } else if (match(TOKEN_VAR, compiler)){
+  if (match(TOKEN_SEMICOLON, compiler)) {
+    // no initializer
+  } else if (match(TOKEN_VAR, compiler)) {
     varDeclaration(compiler);
   } else {
     expressionStatement(compiler);
   }
-  int loopStart = compiler->chunk->count;
+  int loopStart = currentChunk(compiler)->count;
   int exitJump = -1;
-  if(!match(TOKEN_SEMICOLON, compiler)){
+  if (!match(TOKEN_SEMICOLON, compiler)) {
     expression(compiler);
     consume(TOKEN_SEMICOLON, "Expect ';'", compiler);
-    
-    //jump out of the loop 
+
+    // jump out of the loop
     exitJump = emitJump(OP_JUMP_IF_FALSE, compiler);
     emitByte(OP_POP, compiler);
   }
 
-  if (!match(TOKEN_RIGHT_PAREN, compiler)){
+  if (!match(TOKEN_RIGHT_PAREN, compiler)) {
     int bodyJump = emitJump(OP_JUMP, compiler);
-    int incrementStart = compiler->chunk->count;
+    int incrementStart = currentChunk(compiler)->count;
 
     expression(compiler);
     emitByte(OP_POP, compiler);
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.", compiler);
 
     emitLoop(loopStart, compiler);
+    loopStart = incrementStart;
     patchJump(bodyJump, compiler);
   }
   statement(compiler);
   emitLoop(loopStart, compiler);
-  if (exitJump = -1){
+  if (exitJump != -1) {
     patchJump(exitJump, compiler);
     emitByte(OP_POP, compiler); // condition
   }
@@ -441,14 +461,14 @@ static void printStatement(Compiler *compiler) {
 }
 
 static void whileStatement(Compiler *compiler) {
-  int loopStart = compiler->chunk->count;
+  int loopStart = currentChunk(compiler)->count;
 
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while.", compiler);
   expression(compiler);
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition", compiler);
 
   int exitJump = emitJump(OP_JUMP_IF_FALSE, compiler);
-  emitJump(OP_POP, compiler);
+  emitByte(OP_POP, compiler);
   statement(compiler);
   emitLoop(loopStart, compiler);
 
@@ -584,8 +604,8 @@ static bool identifierEqual(Token *a, Token *b) {
 }
 
 static int resolveLocal(Compiler *compiler, Token *name) {
-  for (int i = compiler->scoper.localCount - 1; i >= 0; i--) {
-    Local *local = &compiler->scoper.locals[i];
+  for (int i = compiler->scoper->localCount - 1; i >= 0; i--) {
+    Local *local = &compiler->scoper->locals[i];
     if (identifierEqual(name, &local->name)) {
       if (local->depth == -1) {
         error("Cannot read local variable in its own initializer", compiler);
@@ -597,11 +617,11 @@ static int resolveLocal(Compiler *compiler, Token *name) {
 }
 
 static void addLocal(Token name, Compiler *compiler) {
-  if (compiler->scoper.localCount == UINT8_COUNT) {
+  if (compiler->scoper->localCount == UINT8_COUNT) {
     error("Too many local variables in Function", compiler);
     return;
   }
-  Local *local = &compiler->scoper.locals[compiler->scoper.localCount++];
+  Local *local = &compiler->scoper->locals[compiler->scoper->localCount++];
   local->name = name;
   local->depth = -1;
 }
@@ -609,9 +629,9 @@ static void addLocal(Token name, Compiler *compiler) {
 static void declareVariable(Compiler *compiler) {
   Token *name = &compiler->parser.previous;
 
-  for (int i = compiler->scoper.localCount - 1; i >= 0; i--) {
-    Local *local = &compiler->scoper.locals[i];
-    if (local->depth != -1 && local->depth < compiler->scoper.scopeDepth) {
+  for (int i = compiler->scoper->localCount - 1; i >= 0; i--) {
+    Local *local = &compiler->scoper->locals[i];
+    if (local->depth != -1 && local->depth < compiler->scoper->scopeDepth) {
       break;
     }
     if (identifierEqual(name, &local->name)) {
@@ -619,7 +639,7 @@ static void declareVariable(Compiler *compiler) {
     }
   }
 
-  if (compiler->scoper.scopeDepth == 0)
+  if (compiler->scoper->scopeDepth == 0)
     return;
 
   addLocal(*name, compiler);
@@ -628,19 +648,19 @@ static void declareVariable(Compiler *compiler) {
 static uint8_t parseVariable(const char *errorMsg, Compiler *compiler) {
   consume(TOKEN_IDENTIFIER, errorMsg, compiler);
   declareVariable(compiler);
-  if (compiler->scoper.scopeDepth > 0)
+  if (compiler->scoper->scopeDepth > 0)
     return 0;
 
   return identifierConstant(compiler);
 }
 
 static void markInitialized(Compiler *compiler) {
-  compiler->scoper.locals[compiler->scoper.localCount - 1].depth =
-      compiler->scoper.scopeDepth;
+  compiler->scoper->locals[compiler->scoper->localCount - 1].depth =
+      compiler->scoper->scopeDepth;
 }
 
 static void defineVariable(uint8_t global, Compiler *compiler) {
-  if (compiler->scoper.scopeDepth > 0) {
+  if (compiler->scoper->scopeDepth > 0) {
     markInitialized(compiler);
     return;
   }
@@ -649,23 +669,22 @@ static void defineVariable(uint8_t global, Compiler *compiler) {
 
 static ParseRule *getRule(TokenType type) { return &rules[type]; }
 
-bool compile(const char *source, Chunk *chunk, VM *vm) {
+ObjFunction *compile(const char *source, VM *vm) {
   Scanner scanner;
-  // Parser parser;
   Compiler compiler;
+  Scoper scoper;
 
+  compiler.vm = vm;
+  compiler.scoper = NULL;
   initScanner(source, &scanner);
   initParser(&scanner, &compiler);
-  initCompiler(&compiler);
-
-  compiler.chunk = chunk;
-  compiler.vm = vm;
+  initScoper(&scoper, TYPE_SCRIPT, &compiler);
 
   advance(&compiler);
   while (!match(TOKEN_EOF, &compiler)) {
     declaration(&compiler);
   }
-  endCompiler(&compiler);
+  ObjFunction *function = endCompiler(&compiler);
 
-  return !compiler.parser.hadError;
+  return compiler.parser.hadError ? NULL : function;
 }

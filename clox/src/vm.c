@@ -241,19 +241,15 @@ static InterpretResult run(VM *vm) {
 }
 
 InterpretResult interpret(const char *source, VM *vm) {
-
-  Chunk chunk;
-  initChunk(&chunk);
-  if (!compile(source, &chunk, vm)) {
-    freeChunk(&chunk);
+  ObjFunction *function = compile(source, vm);
+  if (function == NULL)
     return INTERPRET_COMPILE_ERROR;
-  }
 
-  vm->chunk = &chunk;
+  // Temporary until call frames: the script function occupies stack slot 0,
+  // matching the slot the compiler reserves for it.
+  push(OBJ_VAL(function), vm);
+  vm->chunk = &function->chunk;
   vm->ip = vm->chunk->code;
 
-  InterpretResult result = run(vm);
-  freeChunk(&chunk);
-
-  return result;
+  return run(vm);
 }
