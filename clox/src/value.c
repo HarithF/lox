@@ -30,6 +30,10 @@ void freeValueArray(ValueArray *array) {
 
 void printObject(Value val) {
   switch (OBJ_TYPE(val)) {
+  case OBJ_FUNCTION: {
+    printFunction(AS_FUNCTION(val));
+    break;
+  }
   case OBJ_STRING:
     printf("%s", AS_CSTRING(val));
     break;

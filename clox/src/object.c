@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "chunk.h"
 #include "common.h"
 #include "memory.h"
 #include "object.h"
@@ -16,6 +17,14 @@ static Obj *allocateObject(size_t size, ObjType type, VM *vm) {
   object->next = vm->objects;
   vm->objects = object;
   return object;
+}
+
+ObjFunction *newFunction(VM *vm) {
+  ObjFunction *function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION, vm);
+  function->arity = 0;
+  function->name = NULL;
+  initChunk(&function->chunk);
+  return function;
 }
 
 static ObjString *allocateString(char *chars, int length, uint32_t hash,
@@ -58,4 +67,8 @@ ObjString *copyString(const char *chars, int length, VM *vm) {
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';
   return allocateString(heapChars, length, hash, vm);
+}
+
+void printFunction(ObjFunction *function) {
+  printf("<fn %s>", function->name->chars);
 }
