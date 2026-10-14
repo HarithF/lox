@@ -118,9 +118,22 @@ static TokenType identifierType(Scanner *scanner) {
   switch (scanner->start[0]) {
   case 'a':
     return checkKeyword(1, 2, "nd", TOKEN_AND, scanner);
+  case 'b':
+    return checkKeyword(1, 4, "reak", TOKEN_BREAK, scanner);
   case 'c':
-    return 0;
-    checkKeyword(1, 4, "lass", TOKEN_CLASS, scanner);
+    if (scanner->current - scanner->start > 1) {
+      switch (scanner->start[1]) {
+      case 'l':
+        return checkKeyword(2, 3, "ass", TOKEN_CLASS, scanner);
+      case 'a':
+        return checkKeyword(2, 2, "se", TOKEN_CASE, scanner);
+      case 'o':
+        return checkKeyword(2, 6, "ntinue", TOKEN_CONTINUE, scanner);
+      }
+    }
+    break;
+  case 'd':
+    return checkKeyword(1, 6, "efault", TOKEN_DEFAULT, scanner);
   case 'e':
     return checkKeyword(1, 3, "lse", TOKEN_ELSE, scanner);
   case 'f':
@@ -146,7 +159,15 @@ static TokenType identifierType(Scanner *scanner) {
   case 'r':
     return checkKeyword(1, 5, "eturn", TOKEN_RETURN, scanner);
   case 's':
-    return checkKeyword(1, 4, "uper", TOKEN_SUPER, scanner);
+    if (scanner->current - scanner->start > 1) {
+      switch (scanner->start[1]) {
+      case 'u':
+        return checkKeyword(2, 3, "per", TOKEN_SUPER, scanner);
+      case 'w':
+        return checkKeyword(2, 4, "itch", TOKEN_SWITCH, scanner);
+      }
+    }
+    break;
   case 't':
     if (scanner->current - scanner->start > 1) {
       switch (scanner->start[1]) {

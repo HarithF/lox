@@ -51,6 +51,8 @@ static void and_(Compiler *);
 static uint8_t parseVariable(const char *, Compiler *);
 static uint8_t identifierConstant(Compiler *);
 static int resolveLocal(Compiler *, Token *);
+static void addLocal(Token, Compiler *);
+static void markInitialized(Compiler *);
 
 // helpers:
 
@@ -436,6 +438,12 @@ static void forStatement(Compiler *compiler) {
   endScope(compiler);
 }
 
+static void printStatement(Compiler *compiler) {
+  expression(compiler);
+  consume(TOKEN_SEMICOLON, "Expect ';' after value.", compiler);
+  emitByte(OP_PRINT, compiler);
+}
+
 static void ifStatement(Compiler *compiler) {
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if;.", compiler);
   expression(compiler);
@@ -454,10 +462,64 @@ static void ifStatement(Compiler *compiler) {
   patchJump(elseJump, compiler);
 }
 
-static void printStatement(Compiler *compiler) {
+static void caseBody(Compiler *compiler) {
+  beginScope(compiler);
+  while (!check(TOKEN_CASE, &compiler->parser) &&
+         !check(TOKEN_DEFAULT, &compiler->parser) &&
+         !check(TOKEN_RIGHT_BRACE, &compiler->parser) &&
+         !check(TOKEN_EOF, &compiler->parser)) {
+    declaration(compiler);
+  }
+  endScope(compiler);
+}
+
+static void switchStatement(Compiler *compiler) {
+  beginScope(compiler);
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after Switch.", compiler);
   expression(compiler);
-  consume(TOKEN_SEMICOLON, "Expect ';' after value.", compiler);
-  emitByte(OP_PRINT, compiler);
+  addLocal((Token){.type = TOKEN_IDENTIFIER,
+                   .start = "",
+                   .length = 0,
+                   .line = compiler->parser.current.line},
+           compiler);
+  markInitialized(compiler);
+  uint8_t slot = compiler->scoper->localCount - 1;
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression", compiler);
+  consume(TOKEN_LEFT_BRACE, "Expect '{' after Switch expression", compiler);
+  int endJumps[256];
+  int caseCount = 0;
+  while (match(TOKEN_CASE, compiler)) {
+    emitBytes(OP_GET_LOCAL, slot, compiler);
+    expression(compiler);
+    consume(TOKEN_COLON, "Expect ':' after case value.", compiler);
+    emitByte(OP_EQUAL, compiler);
+
+    int nextCase = emitJump(OP_JUMP_IF_FALSE, compiler);
+    emitByte(OP_POP, compiler); // pop true
+
+    caseBody(compiler);
+
+    if (caseCount == 256)
+      error("Too many cases in switch.", compiler);
+    else
+      endJumps[caseCount++] = emitJump(OP_JUMP, compiler);
+
+    patchJump(nextCase, compiler); // false lands here...
+    emitByte(OP_POP, compiler);    // pops false
+  }
+
+  if (match(TOKEN_DEFAULT, compiler)) {
+    consume(TOKEN_COLON, "Expect ':' after 'default'.", compiler);
+    caseBody(compiler);
+    if (!check(TOKEN_RIGHT_BRACE, &compiler->parser))
+      errorAtCurrent("'default' must be the last case in a switch.", compiler);
+  }
+
+  for (int i = 0; i < caseCount; i++)
+    patchJump(endJumps[i], compiler);
+
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after switch cases.", compiler);
+  endScope(compiler);
 }
 
 static void whileStatement(Compiler *compiler) {
@@ -478,6 +540,23 @@ static void whileStatement(Compiler *compiler) {
 
 static void synchronize(Compiler *compiler) {
   compiler->parser.panicMode = false;
+
+  // A stray 'case'/'default'
+  if (check(TOKEN_CASE, &compiler->parser) ||
+      check(TOKEN_DEFAULT, &compiler->parser)) {
+    int depth = 0;
+    while (!check(TOKEN_EOF, &compiler->parser)) {
+      if (check(TOKEN_LEFT_BRACE, &compiler->parser)) {
+        depth++;
+      } else if (check(TOKEN_RIGHT_BRACE, &compiler->parser) && depth-- == 0) {
+        advance(compiler);
+        return;
+      }
+      advance(compiler);
+    }
+    return;
+  }
+
   while (compiler->parser.current.type != TOKEN_EOF) {
     if (compiler->parser.previous.type == TOKEN_SEMICOLON)
       return;
@@ -490,6 +569,7 @@ static void synchronize(Compiler *compiler) {
     case TOKEN_WHILE:
     case TOKEN_PRINT:
     case TOKEN_RETURN:
+    case TOKEN_SWITCH:
       return;
     default:; // nothing
     }
@@ -517,6 +597,8 @@ static void statement(Compiler *compiler) {
     ifStatement(compiler);
   } else if (match(TOKEN_WHILE, compiler)) {
     whileStatement(compiler);
+  } else if (match(TOKEN_SWITCH, compiler)) {
+    switchStatement(compiler);
   } else if (match(TOKEN_LEFT_BRACE, compiler)) {
     beginScope(compiler);
     block(compiler);
