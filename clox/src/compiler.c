@@ -180,6 +180,7 @@ static void initScoper(Scoper *scoper, FunctionType type, Compiler *compiler) {
   scoper->type = type;
   scoper->localCount = 0;
   scoper->scopeDepth = 0;
+  scoper->loop = NULL;
   scoper->function = newFunction(compiler->vm);
   compiler->scoper = scoper;
 
@@ -213,6 +214,30 @@ static void endScope(Compiler *compiler) {
              compiler->scoper->scopeDepth) {
     emitByte(OP_POP, compiler);
     compiler->scoper->localCount--;
+  }
+}
+
+static void beginLoop(Loop *loop, int start, Compiler *compiler) {
+  loop->enclosing = compiler->scoper->loop;
+  loop->start = start;
+  loop->scopeDepth = compiler->scoper->scopeDepth;
+  loop->breakCount = 0;
+  compiler->scoper->loop = loop;
+}
+
+// Call after the loop's exit path, so every 'break' lands past it.
+static void endLoop(Compiler *compiler) {
+  Loop *loop = compiler->scoper->loop;
+  for (int i = 0; i < loop->breakCount; i++)
+    patchJump(loop->breakJumps[i], compiler);
+  compiler->scoper->loop = loop->enclosing;
+}
+
+static void popLoopLocals(Compiler *compiler) {
+  Scoper *scoper = compiler->scoper;
+  for (int i = scoper->localCount - 1;
+       i >= 0 && scoper->locals[i].depth > scoper->loop->scopeDepth; i--) {
+    emitByte(OP_POP, compiler);
   }
 }
 
@@ -429,12 +454,16 @@ static void forStatement(Compiler *compiler) {
     loopStart = incrementStart;
     patchJump(bodyJump, compiler);
   }
+
+  Loop loop;
+  beginLoop(&loop, loopStart, compiler);
   statement(compiler);
   emitLoop(loopStart, compiler);
   if (exitJump != -1) {
     patchJump(exitJump, compiler);
     emitByte(OP_POP, compiler); // condition
   }
+  endLoop(compiler);
   endScope(compiler);
 }
 
@@ -531,11 +560,40 @@ static void whileStatement(Compiler *compiler) {
 
   int exitJump = emitJump(OP_JUMP_IF_FALSE, compiler);
   emitByte(OP_POP, compiler);
+
+  Loop loop;
+  beginLoop(&loop, loopStart, compiler);
   statement(compiler);
   emitLoop(loopStart, compiler);
 
   patchJump(exitJump, compiler);
   emitByte(OP_POP, compiler);
+  endLoop(compiler);
+}
+
+static void breakStatement(Compiler *compiler) {
+  Loop *loop = compiler->scoper->loop;
+  if (loop == NULL) {
+    error("Can't use 'break' outside of a loop.", compiler);
+  } else {
+    popLoopLocals(compiler);
+    if (loop->breakCount == UINT8_COUNT)
+      error("Too many 'break' statements in one loop.", compiler);
+    else
+      loop->breakJumps[loop->breakCount++] = emitJump(OP_JUMP, compiler);
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.", compiler);
+}
+
+static void continueStatement(Compiler *compiler) {
+  Loop *loop = compiler->scoper->loop;
+  if (loop == NULL) {
+    error("Can't use 'continue' outside of a loop.", compiler);
+  } else {
+    popLoopLocals(compiler);
+    emitLoop(loop->start, compiler);
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.", compiler);
 }
 
 static void synchronize(Compiler *compiler) {
@@ -570,6 +628,8 @@ static void synchronize(Compiler *compiler) {
     case TOKEN_PRINT:
     case TOKEN_RETURN:
     case TOKEN_SWITCH:
+    case TOKEN_BREAK:
+    case TOKEN_CONTINUE:
       return;
     default:; // nothing
     }
@@ -603,6 +663,10 @@ static void statement(Compiler *compiler) {
     beginScope(compiler);
     block(compiler);
     endScope(compiler);
+  } else if (match(TOKEN_BREAK, compiler)) {
+    breakStatement(compiler);
+  } else if (match(TOKEN_CONTINUE, compiler)) {
+    continueStatement(compiler);
   } else {
     expressionStatement(compiler);
   }

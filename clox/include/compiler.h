@@ -24,6 +24,15 @@ typedef enum {
   TYPE_SCRIPT,
 } FunctionType;
 
+// A while/for loop being compiled; innermost first, linked via `enclosing`.
+typedef struct Loop {
+  struct Loop *enclosing;
+  int start; // where 'continue' jumps back to
+  int scopeDepth;
+  int breakJumps[UINT8_COUNT];
+  int breakCount;
+} Loop;
+
 // Per-function compilation state.
 typedef struct Scoper {
   struct Scoper *enclosing;
@@ -32,6 +41,7 @@ typedef struct Scoper {
   Local locals[UINT8_COUNT];
   int localCount;
   int scopeDepth;
+  Loop *loop;
 } Scoper;
 
 // State shared across the whole compilation.
