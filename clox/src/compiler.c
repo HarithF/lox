@@ -183,6 +183,11 @@ static void initScoper(Scoper *scoper, FunctionType type, Compiler *compiler) {
   scoper->loop = NULL;
   scoper->function = newFunction(compiler->vm);
   compiler->scoper = scoper;
+  if (type != TYPE_SCRIPT) {
+    scoper->function->name =
+        copyString(compiler->parser.previous.start,
+                   compiler->parser.previous.length, compiler->vm);
+  }
 
   Local *local = &scoper->locals[scoper->localCount++];
   local->depth = 0;
@@ -400,6 +405,28 @@ static void block(Compiler *compiler) {
     declaration(compiler);
   }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.", compiler);
+}
+
+static void function(FunctionType type, Compiler *compiler) {
+  Scoper scope;
+  initScoper(&scope, type, compiler);
+  beginScope(compiler);
+
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after function name", compiler);
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters", compiler);
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before function body", compiler);
+
+  block(compiler);
+
+  ObjFunction *function = endCompiler(compiler);
+  emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function), compiler), compiler);
+}
+
+static void funDeclaration(Compiler *compiler) {
+  uint8_t global = parseVariable("Expect function name.", compiler);
+  markInitialized(compiler);
+  function(TYPE_FUNCTION, compiler);
+  defineVariable(global, compiler);
 }
 
 static void varDeclaration(Compiler *compiler) {
@@ -638,7 +665,9 @@ static void synchronize(Compiler *compiler) {
 }
 
 static void declaration(Compiler *compiler) {
-  if (match(TOKEN_VAR, compiler)) {
+  if (match(TOKEN_FUN, compiler)) {
+    funDeclaration(compiler);
+  } else if (match(TOKEN_VAR, compiler)) {
     varDeclaration(compiler);
   } else {
     statement(compiler);
@@ -801,6 +830,8 @@ static uint8_t parseVariable(const char *errorMsg, Compiler *compiler) {
 }
 
 static void markInitialized(Compiler *compiler) {
+  if (compiler->scoper->scopeDepth == 0)
+    return;
   compiler->scoper->locals[compiler->scoper->localCount - 1].depth =
       compiler->scoper->scopeDepth;
 }
