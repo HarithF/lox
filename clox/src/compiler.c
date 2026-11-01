@@ -160,7 +160,10 @@ static void patchJump(int offset, Compiler *compiler) {
   currentChunk(compiler)->code[offset] = (jump >> 8) & 0xff;
   currentChunk(compiler)->code[offset + 1] = jump & 0xff;
 }
-static void emitReturn(Compiler *compiler) { emitByte(OP_RETURN, compiler); }
+static void emitReturn(Compiler *compiler) {
+  emitByte(OP_NIL, compiler);
+  emitByte(OP_RETURN, compiler);
+}
 
 static uint8_t makeConstant(Value value, Compiler *compiler) {
   int constant = addConstant(currentChunk(compiler), value);
@@ -220,6 +223,21 @@ static void endScope(Compiler *compiler) {
     emitByte(OP_POP, compiler);
     compiler->scoper->localCount--;
   }
+}
+
+static uint8_t argumentList(Compiler *compiler) {
+  uint8_t argCount = 0;
+  if (!check(TOKEN_RIGHT_PAREN, &compiler->parser)) {
+    do {
+      expression(compiler);
+      if (argCount == 255) {
+        error("Cannot have more than 255 arguments", compiler);
+      }
+      argCount++;
+    } while (match(TOKEN_COMMA, compiler));
+  }
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments", compiler);
+  return argCount;
 }
 
 static void beginLoop(Loop *loop, int start, Compiler *compiler) {
@@ -320,6 +338,11 @@ static void ternary(Compiler *compiler) {
   patchJump(endJump, compiler);
 }
 
+static void call(Compiler *compiler) {
+  uint8_t argCount = argumentList();
+  emitBytes(OP_CALL, argCount, compiler);
+}
+
 static void number(Compiler *compiler) {
   double value = strtod(compiler->parser.previous.start, NULL);
   emitConstat(NUMBER_VAL(value), compiler);
@@ -413,6 +436,17 @@ static void function(FunctionType type, Compiler *compiler) {
   beginScope(compiler);
 
   consume(TOKEN_LEFT_PAREN, "Expect '(' after function name", compiler);
+  if (!check(TOKEN_RIGHT_PAREN, &compiler->parser)) {
+    ObjFunction *fun_curr = compiler->scoper->function;
+    do {
+      fun_curr->arity++;
+      if (fun_curr->arity > 255) {
+        errorAtCurrent("Cannot have more than 255 parameters", compiler);
+        uint8_t constant = parseVariable("Expect parameter name", compiler);
+        defineVariable(constant, compiler);
+      }
+    } while (match(TOKEN_COMMA, compiler));
+  }
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters", compiler);
   consume(TOKEN_LEFT_BRACE, "Expect '{' before function body", compiler);
 
@@ -702,7 +736,7 @@ static void statement(Compiler *compiler) {
 }
 
 ParseRule rules[] = {
-    [TOKEN_LEFT_PAREN] = {grouping, NULL, PREC_NONE},
+    [TOKEN_LEFT_PAREN] = {grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LEFT_BRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE] = {NULL, NULL, PREC_NONE},
