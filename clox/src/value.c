@@ -34,6 +34,9 @@ void printObject(Value val) {
     printFunction(AS_FUNCTION(val));
     break;
   }
+  case OBJ_NATIVE:
+    printf("<native fn>");
+    break;
   case OBJ_STRING:
     printf("%s", AS_CSTRING(val));
     break;

@@ -339,7 +339,7 @@ static void ternary(Compiler *compiler) {
 }
 
 static void call(Compiler *compiler) {
-  uint8_t argCount = argumentList();
+  uint8_t argCount = argumentList(compiler);
   emitBytes(OP_CALL, argCount, compiler);
 }
 
@@ -442,9 +442,9 @@ static void function(FunctionType type, Compiler *compiler) {
       fun_curr->arity++;
       if (fun_curr->arity > 255) {
         errorAtCurrent("Cannot have more than 255 parameters", compiler);
-        uint8_t constant = parseVariable("Expect parameter name", compiler);
-        defineVariable(constant, compiler);
       }
+      uint8_t constant = parseVariable("Expect parameter name", compiler);
+      defineVariable(constant, compiler);
     } while (match(TOKEN_COMMA, compiler));
   }
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters", compiler);
@@ -532,6 +532,19 @@ static void printStatement(Compiler *compiler) {
   expression(compiler);
   consume(TOKEN_SEMICOLON, "Expect ';' after value.", compiler);
   emitByte(OP_PRINT, compiler);
+}
+
+static void returnStatment(Compiler *compiler) {
+  if (compiler->scoper->type == TYPE_SCRIPT) {
+    error("Cannot return from top-level code.", compiler);
+  }
+  if (match(TOKEN_SEMICOLON, compiler)) {
+    emitReturn(compiler);
+  } else {
+    expression(compiler);
+    consume(TOKEN_SEMICOLON, "Expect ';' after return value", compiler);
+    emitByte(OP_RETURN, compiler);
+  }
 }
 
 static void ifStatement(Compiler *compiler) {
@@ -718,6 +731,8 @@ static void statement(Compiler *compiler) {
     forStatement(compiler);
   } else if (match(TOKEN_IF, compiler)) {
     ifStatement(compiler);
+  } else if (match(TOKEN_RETURN, compiler)) {
+    returnStatment(compiler);
   } else if (match(TOKEN_WHILE, compiler)) {
     whileStatement(compiler);
   } else if (match(TOKEN_SWITCH, compiler)) {
