@@ -453,7 +453,7 @@ static void function(FunctionType type, Compiler *compiler) {
   block(compiler);
 
   ObjFunction *function = endCompiler(compiler);
-  emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function), compiler), compiler);
+  emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function), compiler), compiler);
 }
 
 static void funDeclaration(Compiler *compiler) {

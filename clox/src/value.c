@@ -30,10 +30,13 @@ void freeValueArray(ValueArray *array) {
 
 void printObject(Value val) {
   switch (OBJ_TYPE(val)) {
-  case OBJ_FUNCTION: {
+  case OBJ_CLOSURE:
+    printFunction(AS_CLOSURE(val)->function);
+    break;
+  case OBJ_FUNCTION:
     printFunction(AS_FUNCTION(val));
     break;
-  }
+
   case OBJ_NATIVE:
     printf("<native fn>");
     break;

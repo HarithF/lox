@@ -20,6 +20,12 @@ static Obj *allocateObject(size_t size, ObjType type, VM *vm) {
   return object;
 }
 
+ObjClosure *newClosure(ObjFunction *function, VM *vm) {
+  ObjClosure *closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE, vm);
+  closure->function = function;
+  return closure;
+}
+
 ObjFunction *newFunction(VM *vm) {
   ObjFunction *function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION, vm);
   function->arity = 0;
@@ -28,9 +34,10 @@ ObjFunction *newFunction(VM *vm) {
   return function;
 }
 
-ObjNative *newNative(NatveFn function, VM *vm) {
+ObjNative *newNative(NatveFn function, int arity, VM *vm) {
   ObjNative *native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE, vm);
   native->function = function;
+  native->arity = arity;
   return native;
 }
 
