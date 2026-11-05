@@ -43,6 +43,9 @@ void printObject(Value val) {
   case OBJ_STRING:
     printf("%s", AS_CSTRING(val));
     break;
+  case OBJ_UPVALUE:
+    printf("upvalue");
+    break;
   }
 }
 

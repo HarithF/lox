@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,7 +51,7 @@ static void defineVariable(uint8_t, Compiler *);
 static void and_(Compiler *);
 static uint8_t parseVariable(const char *, Compiler *);
 static uint8_t identifierConstant(Compiler *);
-static int resolveLocal(Compiler *, Token *);
+static int resolveLocal(Compiler *, Scoper *, Token *);
 static void addLocal(Token, Compiler *);
 static void markInitialized(Compiler *);
 
@@ -281,6 +282,39 @@ static void unary(Compiler *compiler) {
   }
 }
 
+static int addUpvalue(Scoper *scoper, uint8_t index, bool isLocal,
+                      Compiler *compiler) {
+  int upvalueCount = scoper->function->upvalueCount;
+
+  for (int i = 0; i < upvalueCount; i++) {
+    Upvalue *upvalue = &scoper->upvalues[i];
+    if (upvalue->index == index && upvalue->isLocal == isLocal)
+      return i;
+  }
+  if (upvalueCount == UINT8_COUNT) {
+    error("Too many closure variables in functions.", compiler);
+    return 0;
+  }
+  scoper->upvalues[upvalueCount].isLocal = isLocal;
+  scoper->upvalues[upvalueCount].index = index;
+  return scoper->function->upvalueCount++;
+}
+
+static int resolveUpvalue(Compiler *compiler, Scoper *scoper, Token *name) {
+  if (scoper->enclosing == NULL)
+    return -1;
+
+  int local = resolveLocal(compiler, scoper->enclosing, name);
+  if (local != -1) {
+    return addUpvalue(scoper, (uint8_t)local, true, compiler);
+  }
+  int upvalue = resolveUpvalue(compiler, scoper->enclosing, name);
+  if (upvalue != -1) {
+    return addUpvalue(scoper, (uint8_t)upvalue, false, compiler);
+  }
+  return -1;
+}
+
 static void binary(Compiler *compiler) {
   TokenType operatorType = compiler->parser.previous.type;
   ParseRule *rule = getRule(operatorType);
@@ -394,10 +428,14 @@ static void string(Compiler *compiler) {
 
 static void namedVariable(Compiler *compiler) {
   uint8_t getOp, setOp;
-  int arg = resolveLocal(compiler, &compiler->parser.previous);
+  Token *name = &compiler->parser.previous;
+  int arg = resolveLocal(compiler, compiler->scoper, name);
   if (arg != -1) {
     getOp = OP_GET_LOCAL;
     setOp = OP_SET_LOCAL;
+  } else if ((arg = resolveUpvalue(compiler, compiler->scoper, name)) != -1) {
+    getOp = OP_GET_UPVALUE;
+    setOp = OP_SET_UPVALUE;
   } else {
     arg = identifierConstant(compiler);
     getOp = OP_GET_GLOBAL;
@@ -454,6 +492,11 @@ static void function(FunctionType type, Compiler *compiler) {
 
   ObjFunction *function = endCompiler(compiler);
   emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function), compiler), compiler);
+
+  for (int i = 0; i < function->upvalueCount; i++) {
+    emitByte(scope.upvalues[i].isLocal ? 1 : 0, compiler);
+    emitByte(scope.upvalues[i].index, compiler);
+  }
 }
 
 static void funDeclaration(Compiler *compiler) {
@@ -827,9 +870,9 @@ static bool identifierEqual(Token *a, Token *b) {
   return memcmp(a->start, b->start, a->length) == 0;
 }
 
-static int resolveLocal(Compiler *compiler, Token *name) {
-  for (int i = compiler->scoper->localCount - 1; i >= 0; i--) {
-    Local *local = &compiler->scoper->locals[i];
+static int resolveLocal(Compiler *compiler, Scoper *scoper, Token *name) {
+  for (int i = scoper->localCount - 1; i >= 0; i--) {
+    Local *local = &scoper->locals[i];
     if (identifierEqual(name, &local->name)) {
       if (local->depth == -1) {
         error("Cannot read local variable in its own initializer", compiler);

@@ -2,6 +2,7 @@
 #define clox_compiler_h
 
 #include "chunk.h"
+#include "common.h"
 #include "object.h"
 #include "scanner.h"
 #include "vm.h"
@@ -33,6 +34,11 @@ typedef struct Loop {
   int breakCount;
 } Loop;
 
+typedef struct {
+  uint8_t index;
+  bool isLocal;
+} Upvalue;
+
 // Per-function compilation state.
 typedef struct Scoper {
   struct Scoper *enclosing;
@@ -40,6 +46,7 @@ typedef struct Scoper {
   FunctionType type;
   Local locals[UINT8_COUNT];
   int localCount;
+  Upvalue upvalues[UINT8_COUNT];
   int scopeDepth;
   Loop *loop;
 } Scoper;

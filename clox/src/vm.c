@@ -122,6 +122,11 @@ static bool callValue(Value callee, int argCount, VM *vm) {
   runtimeError(vm, "Can only call functions and classes");
   return false;
 }
+
+static ObjUpvalue *captureUpvalue(Value *local, VM *vm) {
+  ObjUpvalue *createdUpvalue = newUpvalue(local, vm);
+  return createdUpvalue;
+}
 static bool isFalsey(Value val) {
   return IS_NIL(val) || (IS_BOOL(val) && !AS_BOOL(val));
 }
@@ -233,6 +238,17 @@ static InterpretResult run(VM *vm) {
       }
       break;
     }
+    case OP_GET_UPVALUE: {
+      uint8_t slot = READ_BYTE();
+      push(*frame->closure->upvalues[slot]->location, vm);
+      break;
+    }
+
+    case OP_SET_UPVALUE: {
+      uint8_t slot = READ_BYTE();
+      *frame->closure->upvalues[slot]->location = peek(0, vm);
+      break;
+    }
 
     case OP_EQUAL: {
       Value b = pop(vm);
@@ -314,6 +330,15 @@ static InterpretResult run(VM *vm) {
       ObjFunction *function = AS_FUNCTION(READ_CONSTANT());
       ObjClosure *closure = newClosure(function, vm);
       push(OBJ_VAL(closure), vm);
+      for (int i = 0; i < closure->upvalueCount; i++) {
+        uint8_t isLocal = READ_BYTE();
+        uint8_t index = READ_BYTE();
+        if (isLocal) {
+          closure->upvalues[i] = captureUpvalue(frame->slots + index, vm);
+        } else {
+          closure->upvalues[i] = frame->closure->upvalues[index];
+        }
+      }
       break;
     }
 

@@ -21,14 +21,21 @@ static Obj *allocateObject(size_t size, ObjType type, VM *vm) {
 }
 
 ObjClosure *newClosure(ObjFunction *function, VM *vm) {
+  ObjUpvalue **upvalues = ALLOCATE(ObjUpvalue *, function->upvalueCount);
+  for (int i = 0; i < function->upvalueCount; i++) {
+    upvalues[i] = NULL;
+  }
   ObjClosure *closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE, vm);
   closure->function = function;
+  closure->upvalueCount = function->upvalueCount;
+  closure->upvalues = upvalues;
   return closure;
 }
 
 ObjFunction *newFunction(VM *vm) {
   ObjFunction *function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION, vm);
   function->arity = 0;
+  function->upvalueCount = 0;
   function->name = NULL;
   initChunk(&function->chunk);
   return function;
@@ -81,6 +88,12 @@ ObjString *copyString(const char *chars, int length, VM *vm) {
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';
   return allocateString(heapChars, length, hash, vm);
+}
+
+ObjUpvalue *newUpvalue(Value *slot, VM *vm) {
+  ObjUpvalue *upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE, vm);
+  upvalue->location = slot;
+  return upvalue;
 }
 
 void printFunction(ObjFunction *function) {
