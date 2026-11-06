@@ -195,6 +195,7 @@ static void initScoper(Scoper *scoper, FunctionType type, Compiler *compiler) {
 
   Local *local = &scoper->locals[scoper->localCount++];
   local->depth = 0;
+  local->isCaptured = false;
   local->name.start = "";
   local->name.length = 0;
 }
@@ -221,7 +222,11 @@ static void endScope(Compiler *compiler) {
   while (compiler->scoper->localCount > 0 &&
          compiler->scoper->locals[compiler->scoper->localCount - 1].depth >
              compiler->scoper->scopeDepth) {
-    emitByte(OP_POP, compiler);
+    if (compiler->scoper->locals[compiler->scoper->localCount - 1].isCaptured) {
+      emitByte(OP_CLOSE_UPVALUE, compiler)
+    } else {
+      emitByte(OP_POP, compiler);
+    }
     compiler->scoper->localCount--;
   }
 }
@@ -306,6 +311,7 @@ static int resolveUpvalue(Compiler *compiler, Scoper *scoper, Token *name) {
 
   int local = resolveLocal(compiler, scoper->enclosing, name);
   if (local != -1) {
+    compiler->scoper->enclosing->locals[local].isCaptured = true;
     return addUpvalue(scoper, (uint8_t)local, true, compiler);
   }
   int upvalue = resolveUpvalue(compiler, scoper->enclosing, name);
@@ -891,6 +897,7 @@ static void addLocal(Token name, Compiler *compiler) {
   Local *local = &compiler->scoper->locals[compiler->scoper->localCount++];
   local->name = name;
   local->depth = -1;
+  local->isCaptured = false;
 }
 
 static void declareVariable(Compiler *compiler) {
