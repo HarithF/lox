@@ -14,16 +14,16 @@ void initChunk(Chunk *chunk) {
   initValueArray(&chunk->constants);
 }
 
-void resizeLine(Chunk *chunk) {
+void resizeLine(Chunk *chunk, VM *vm) {
   int old_capacity = chunk->line_capacity;
   chunk->line_capacity = GROW_CAPACITY(old_capacity);
   chunk->lines =
-      GROW_ARRAY(LineRun, chunk->lines, old_capacity, chunk->line_capacity);
+      GROW_ARRAY(LineRun, chunk->lines, old_capacity, chunk->line_capacity, vm);
 }
 
-void recordLine(Chunk *chunk, int line) {
+void recordLine(Chunk *chunk, int line, VM *vm) {
   if (chunk->line_count == 0) {
-    resizeLine(chunk);
+    resizeLine(chunk, vm);
     chunk->lines[0] = (LineRun){line, 1};
     chunk->line_count++;
     return;
@@ -35,7 +35,7 @@ void recordLine(Chunk *chunk, int line) {
     last->count++;
   } else {
     if (chunk->line_capacity < chunk->line_count + 1) {
-      resizeLine(chunk);
+      resizeLine(chunk, vm);
     }
     chunk->lines[chunk->line_count++] = (LineRun){line, 1};
   }
@@ -52,29 +52,29 @@ int getLine(Chunk *chunk, int instruction) {
   return -1;
 }
 
-void writeChunk(Chunk *chunk, uint8_t byte, int line) {
+void writeChunk(Chunk *chunk, uint8_t byte, int line, VM *vm) {
 
   if (chunk->capacity < chunk->count + 1) {
     int old_capacity = chunk->capacity;
     chunk->capacity = GROW_CAPACITY(old_capacity);
     chunk->code =
-        GROW_ARRAY(uint8_t, chunk->code, old_capacity, chunk->capacity);
+        GROW_ARRAY(uint8_t, chunk->code, old_capacity, chunk->capacity, vm);
   }
 
   chunk->code[chunk->count] = byte;
   chunk->count++;
 
-  recordLine(chunk, line);
+  recordLine(chunk, line, vm);
 }
 
-void freeChunk(Chunk *chunk) {
-  FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
-  FREE_ARRAY(LineRun, chunk->lines, chunk->line_capacity);
-  freeValueArray(&chunk->constants);
+void freeChunk(Chunk *chunk, VM *vm) {
+  FREE_ARRAY(uint8_t, chunk->code, chunk->capacity, vm);
+  FREE_ARRAY(LineRun, chunk->lines, chunk->line_capacity, vm);
+  freeValueArray(&chunk->constants, vm);
   initChunk(chunk);
 }
 
-int addConstant(Chunk *chunk, Value val) {
-  writeValueArray(&chunk->constants, val);
+int addConstant(Chunk *chunk, Value val, VM *vm) {
+  writeValueArray(&chunk->constants, val, vm);
   return chunk->constants.count - 1;
 }

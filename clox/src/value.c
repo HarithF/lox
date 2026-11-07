@@ -11,20 +11,20 @@ void initValueArray(ValueArray *array) {
   array->count = 0;
 }
 
-void writeValueArray(ValueArray *array, Value val) {
+void writeValueArray(ValueArray *array, Value val, VM *vm) {
   if (array->capacity < array->count + 1) {
     int old_capacity = array->capacity;
     array->capacity = GROW_CAPACITY(old_capacity);
     array->values =
-        GROW_ARRAY(Value, array->values, old_capacity, array->capacity);
+        GROW_ARRAY(Value, array->values, old_capacity, array->capacity, vm);
   }
 
   array->values[array->count] = val;
   array->count++;
 }
 
-void freeValueArray(ValueArray *array) {
-  FREE_ARRAY(Value, array->values, array->capacity);
+void freeValueArray(ValueArray *array, VM *vm) {
+  FREE_ARRAY(Value, array->values, array->capacity, vm);
   initValueArray(array);
 }
 

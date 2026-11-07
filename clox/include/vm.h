@@ -8,6 +8,9 @@
 #include "value.h"
 #include <stdint.h>
 
+// vm.h only needs Compiler as a pointer;
+typedef struct Compiler Compiler;
+
 #define FRAMES_MAX 64
 #define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
 
@@ -27,6 +30,7 @@ typedef struct VM {
   Table strings;
   ObjUpvalue *openUpvalues;
   Obj *objects;
+  Compiler *compiler; // compiler in progress (GC root), NULL otherwise
 } VM;
 
 typedef enum {

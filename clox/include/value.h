@@ -5,6 +5,7 @@
 
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
+typedef struct VM VM;
 
 typedef enum {
   VAL_BOOL,
@@ -45,8 +46,8 @@ typedef struct {
 } ValueArray;
 bool valuesEqual(Value a, Value b);
 void initValueArray(ValueArray *array);
-void writeValueArray(ValueArray *array, Value val);
-void freeValueArray(ValueArray *array);
+void writeValueArray(ValueArray *array, Value val, VM *vm);
+void freeValueArray(ValueArray *array, VM *vm);
 
 void printValue(Value val);
 

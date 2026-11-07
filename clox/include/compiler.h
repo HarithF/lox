@@ -57,7 +57,7 @@ typedef struct Scoper {
 } Scoper;
 
 // State shared across the whole compilation.
-typedef struct {
+typedef struct Compiler {
   Parser parser;
   Scoper *scoper;
   VM *vm;

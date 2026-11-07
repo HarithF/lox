@@ -13,15 +13,19 @@
   (type *)allocateObject(sizeof(type), objectType, vm)
 
 static Obj *allocateObject(size_t size, ObjType type, VM *vm) {
-  Obj *object = (Obj *)reallocate(NULL, 0, size);
+  Obj *object = (Obj *)reallocate(NULL, 0, size, vm);
   object->type = type;
   object->next = vm->objects;
   vm->objects = object;
+
+#ifdef DEBUG_LOG_GC
+  printf("%p free type %d\n", (void *)object, object->type);
+#endif
   return object;
 }
 
 ObjClosure *newClosure(ObjFunction *function, VM *vm) {
-  ObjUpvalue **upvalues = ALLOCATE(ObjUpvalue *, function->upvalueCount);
+  ObjUpvalue **upvalues = ALLOCATE(ObjUpvalue *, function->upvalueCount, vm);
   for (int i = 0; i < function->upvalueCount; i++) {
     upvalues[i] = NULL;
   }
@@ -54,7 +58,7 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash,
   string->length = length;
   string->chars = chars;
   string->hash = hash;
-  tableSet(&vm->strings, string, NIL_VAL);
+  tableSet(&vm->strings, string, NIL_VAL, vm);
   return string;
 }
 
@@ -71,7 +75,7 @@ ObjString *takeString(char *chars, int length, VM *vm) {
   uint32_t hash = hashString(chars, length);
   ObjString *interned = tableFindString(&vm->strings, chars, length, hash);
   if (interned != NULL) {
-    FREE_ARRAY(char, chars, length + 1);
+    FREE_ARRAY(char, chars, length + 1, vm);
     return interned;
   }
 
@@ -84,7 +88,7 @@ ObjString *copyString(const char *chars, int length, VM *vm) {
   if (interned != NULL) {
     return interned;
   }
-  char *heapChars = ALLOCATE(char, length + 1);
+  char *heapChars = ALLOCATE(char, length + 1, vm);
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';
   return allocateString(heapChars, length, hash, vm);

@@ -5,6 +5,9 @@
 #include "value.h"
 #include <stdint.h>
 
+// only needs VM as a pointer;
+typedef struct VM VM;
+
 typedef enum {
   OP_CONSTANT,
   OP_NIL,
@@ -52,12 +55,12 @@ typedef struct {
   ValueArray constants;
 } Chunk;
 
-void freeChunk(Chunk *chunk);
+void freeChunk(Chunk *chunk, VM *vm);
 void initChunk(Chunk *chunk);
-void writeChunk(Chunk *chunk, uint8_t byte, int line);
+void writeChunk(Chunk *chunk, uint8_t byte, int line, VM *vm);
 
 int getLine(Chunk *chunk, int instruction);
 
-int addConstant(Chunk *chunk, Value val);
+int addConstant(Chunk *chunk, Value val, VM *vm);
 
 #endif

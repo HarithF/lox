@@ -124,7 +124,8 @@ static Chunk *currentChunk(Compiler *compiler) {
 }
 
 static void emitByte(uint8_t byte, Compiler *compiler) {
-  writeChunk(currentChunk(compiler), byte, compiler->parser.previous.line);
+  writeChunk(currentChunk(compiler), byte, compiler->parser.previous.line,
+             compiler->vm);
 }
 
 static void emitBytes(uint8_t byte1, uint8_t byte2, Compiler *compiler) {
@@ -167,7 +168,7 @@ static void emitReturn(Compiler *compiler) {
 }
 
 static uint8_t makeConstant(Value value, Compiler *compiler) {
-  int constant = addConstant(currentChunk(compiler), value);
+  int constant = addConstant(currentChunk(compiler), value, compiler->vm);
   if (constant > UINT8_MAX) {
     error("Too many constants in one chunk", compiler);
     return 0;
@@ -987,6 +988,7 @@ ObjFunction *compile(const char *source, VM *vm) {
 
   compiler.vm = vm;
   compiler.scoper = NULL;
+  vm->compiler = &compiler; // expose in-progress functions as GC roots
   initScanner(source, &scanner);
   initParser(&scanner, &compiler);
   initScoper(&scoper, TYPE_SCRIPT, &compiler);
@@ -996,6 +998,7 @@ ObjFunction *compile(const char *source, VM *vm) {
     declaration(&compiler);
   }
   ObjFunction *function = endCompiler(&compiler);
+  vm->compiler = NULL; // `compiler` is a local; don't leave it dangling
 
   return compiler.parser.hadError ? NULL : function;
 }

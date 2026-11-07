@@ -50,7 +50,7 @@ static void defineNative(const char *name, NatveFn function, int arity,
                          VM *vm) {
   push(OBJ_VAL(copyString(name, (int)strlen(name), vm)), vm);
   push(OBJ_VAL(newNative(function, arity, vm)), vm);
-  tableSet(&vm->globals, AS_STRING(vm->stack[0]), vm->stack[1]);
+  tableSet(&vm->globals, AS_STRING(vm->stack[0]), vm->stack[1], vm);
   pop(vm);
   pop(vm);
 }
@@ -58,15 +58,16 @@ static void defineNative(const char *name, NatveFn function, int arity,
 void initVM(VM *vm) {
   resetStack(vm);
   vm->objects = NULL;
+  vm->compiler = NULL;
   initTable(&vm->globals);
   initTable(&vm->strings);
   defineNative("clock", clockNative, 0, vm);
 }
 
 void freeVM(VM *vm) {
-  freeTable(&vm->globals);
-  freeTable(&vm->strings);
-  freeObjects(vm->objects);
+  freeTable(&vm->globals, vm);
+  freeTable(&vm->strings, vm);
+  freeObjects(vm->objects, vm);
 }
 
 void push(Value val, VM *vm) {
@@ -165,7 +166,7 @@ static void concatenate(VM *vm) {
   ObjString *a = AS_STRING(pop(vm));
 
   int length = a->length + b->length;
-  char *chars = ALLOCATE(char, length + 1);
+  char *chars = ALLOCATE(char, length + 1, vm);
   memcpy(chars, a->chars, a->length);
   memcpy(chars + a->length, b->chars, b->length);
   chars[length] = '\0';
@@ -248,7 +249,7 @@ static InterpretResult run(VM *vm) {
 
     case OP_DEFINE_GLOBAL: {
       ObjString *name = READ_STRING();
-      tableSet(&vm->globals, name, peek(0, vm));
+      tableSet(&vm->globals, name, peek(0, vm), vm);
       pop(vm);
       break;
     }
@@ -260,7 +261,7 @@ static InterpretResult run(VM *vm) {
     }
     case OP_SET_GLOBAL: {
       ObjString *name = READ_STRING();
-      if (tableSet(&vm->globals, name, peek(0, vm))) {
+      if (tableSet(&vm->globals, name, peek(0, vm), vm)) {
         tableDelete(&vm->globals, name);
         runtimeError(vm, "Undefined variable '%s'", name->chars);
         return INTERPRET_RINTIME_ERROR;
