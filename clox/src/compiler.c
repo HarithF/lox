@@ -223,7 +223,7 @@ static void endScope(Compiler *compiler) {
          compiler->scoper->locals[compiler->scoper->localCount - 1].depth >
              compiler->scoper->scopeDepth) {
     if (compiler->scoper->locals[compiler->scoper->localCount - 1].isCaptured) {
-      emitByte(OP_CLOSE_UPVALUE, compiler)
+      emitByte(OP_CLOSE_UPVALUE, compiler);
     } else {
       emitByte(OP_POP, compiler);
     }

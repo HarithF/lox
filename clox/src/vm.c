@@ -146,6 +146,16 @@ static ObjUpvalue *captureUpvalue(Value *local, VM *vm) {
   }
   return createdUpvalue;
 }
+
+static void closeUpvalue(Value *last, VM *vm) {
+  while (vm->openUpvalues != NULL && vm->openUpvalues->location >= last) {
+    ObjUpvalue *upvalue = vm->openUpvalues;
+    upvalue->closed = *upvalue->location;
+    upvalue->location = &upvalue->closed;
+    vm->openUpvalues = upvalue->next;
+  }
+}
+
 static bool isFalsey(Value val) {
   return IS_NIL(val) || (IS_BOOL(val) && !AS_BOOL(val));
 }
@@ -360,9 +370,14 @@ static InterpretResult run(VM *vm) {
       }
       break;
     }
+    case OP_CLOSE_UPVALUE:
+      closeUpvalue(vm->stackTop - 1, vm);
+      pop(vm);
+      break;
 
     case OP_RETURN: {
       Value result = pop(vm);
+      closeUpvalue(frame->slots, vm);
       vm->frameCount--;
       if (vm->frameCount == 0) {
         return INTERPRET_OK;
