@@ -33,6 +33,10 @@ typedef struct Loop {
   int scopeDepth;
   int breakJumps[UINT8_COUNT];
   int breakCount;
+  // 'for' loops with a 'var' initializer: the header variable's slot and
+  // its per-iteration copy's slot; -1 otherwise.
+  int outerSlot;
+  int innerSlot;
 } Loop;
 
 typedef struct {

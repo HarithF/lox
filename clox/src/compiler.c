@@ -251,6 +251,8 @@ static void beginLoop(Loop *loop, int start, Compiler *compiler) {
   loop->start = start;
   loop->scopeDepth = compiler->scoper->scopeDepth;
   loop->breakCount = 0;
+  loop->outerSlot = -1;
+  loop->innerSlot = -1;
   compiler->scoper->loop = loop;
 }
 
@@ -266,8 +268,17 @@ static void popLoopLocals(Compiler *compiler) {
   Scoper *scoper = compiler->scoper;
   for (int i = scoper->localCount - 1;
        i >= 0 && scoper->locals[i].depth > scoper->loop->scopeDepth; i--) {
-    emitByte(OP_POP, compiler);
+    // isCaptured may not be known yet so always close; it's a plain pop when
+    // nothing captures.
+    emitByte(OP_CLOSE_UPVALUE, compiler);
   }
+}
+
+// Write the per-iteration copy back to the header variable.
+static void copyLoopVarBack(Loop *loop, Compiler *compiler) {
+  emitBytes(OP_GET_LOCAL, (uint8_t)loop->innerSlot, compiler);
+  emitBytes(OP_SET_LOCAL, (uint8_t)loop->outerSlot, compiler);
+  emitByte(OP_POP, compiler);
 }
 
 static void unary(Compiler *compiler) {
@@ -534,10 +545,12 @@ static void expressionStatement(Compiler *compiler) {
 static void forStatement(Compiler *compiler) {
   beginScope(compiler);
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'", compiler);
+  int outerSlot = -1;
   if (match(TOKEN_SEMICOLON, compiler)) {
     // no initializer
   } else if (match(TOKEN_VAR, compiler)) {
     varDeclaration(compiler);
+    outerSlot = compiler->scoper->localCount - 1;
   } else {
     expressionStatement(compiler);
   }
@@ -565,9 +578,25 @@ static void forStatement(Compiler *compiler) {
     patchJump(bodyJump, compiler);
   }
 
+  // Give each iteration its own copy of the loop variable
+  int innerSlot = -1;
+  if (outerSlot != -1) {
+    beginScope(compiler);
+    emitBytes(OP_GET_LOCAL, (uint8_t)outerSlot, compiler);
+    addLocal(compiler->scoper->locals[outerSlot].name, compiler);
+    markInitialized(compiler);
+    innerSlot = compiler->scoper->localCount - 1;
+  }
+
   Loop loop;
   beginLoop(&loop, loopStart, compiler);
+  loop.outerSlot = outerSlot;
+  loop.innerSlot = innerSlot;
   statement(compiler);
+  if (innerSlot != -1) {
+    copyLoopVarBack(&loop, compiler);
+    endScope(compiler); // closes the copy if a closure captured it
+  }
   emitLoop(loopStart, compiler);
   if (exitJump != -1) {
     patchJump(exitJump, compiler);
@@ -700,6 +729,8 @@ static void breakStatement(Compiler *compiler) {
     error("Can't use 'break' outside of a loop.", compiler);
   } else {
     popLoopLocals(compiler);
+    if (loop->innerSlot != -1)
+      emitByte(OP_CLOSE_UPVALUE, compiler); // the per-iteration copy
     if (loop->breakCount == UINT8_COUNT)
       error("Too many 'break' statements in one loop.", compiler);
     else
@@ -714,6 +745,10 @@ static void continueStatement(Compiler *compiler) {
     error("Can't use 'continue' outside of a loop.", compiler);
   } else {
     popLoopLocals(compiler);
+    if (loop->innerSlot != -1) {
+      copyLoopVarBack(loop, compiler);
+      emitByte(OP_CLOSE_UPVALUE, compiler); // the per-iteration copy
+    }
     emitLoop(loop->start, compiler);
   }
   consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.", compiler);
