@@ -38,6 +38,10 @@ void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm) {
 }
 
 void freeObject(Obj *object, VM *vm) {
+#ifdef DEBUG_LOG_GC
+  printf("%p free type %d\n", (void *)object, object->type);
+#endif
+
   switch (object->type) {
   case OBJ_CLOSURE: {
     ObjClosure *closure = (ObjClosure *)object;
@@ -52,7 +56,7 @@ void freeObject(Obj *object, VM *vm) {
     break;
   }
   case OBJ_NATIVE: {
-    FREE(OBJ_NATIVE, object, vm);
+    FREE(ObjNative, object, vm);
     break;
   }
   case OBJ_STRING: {
