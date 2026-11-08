@@ -10,33 +10,6 @@
 #include "stdio.h"
 #endif
 
-void collectGarbage(VM *vm) {
-#ifdef DEBUG_LOG_GC
-  printf("-- gc begin\n");
-#endif
-
-#ifdef DEBUG_LOG_GC
-  printf("-- gc end\n");
-#endif
-}
-void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm) {
-  if (new_size > old_size) {
-#ifdef DEBUG_STRESS_GC
-    collectGarbage(vm);
-#endif
-  }
-  if (new_size == 0) {
-    free(pointer);
-    return NULL;
-  }
-
-  void *result = realloc(pointer, new_size);
-  if (result == NULL)
-    exit(1);
-
-  return result;
-}
-
 void freeObject(Obj *object, VM *vm) {
 #ifdef DEBUG_LOG_GC
   printf("%p free type %d\n", (void *)object, object->type);
@@ -78,4 +51,57 @@ void freeObjects(void *list, VM *vm) {
     freeObject(object, vm);
     object = next;
   }
+}
+
+static void markRoots(VM *vm) {
+  for (Value *slot = vm->stack; slot < vm->stackTop; slot++) {
+    markValue(*slot);
+  }
+  markTable(&vm->globals);
+}
+
+void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm) {
+  if (new_size > old_size) {
+#ifdef DEBUG_STRESS_GC
+    collectGarbage(vm);
+#endif
+  }
+  if (new_size == 0) {
+    free(pointer);
+    return NULL;
+  }
+
+  void *result = realloc(pointer, new_size);
+  if (result == NULL)
+    exit(1);
+
+  return result;
+}
+
+void markObject(Obj *object) {
+  if (object == NULL)
+    return;
+#ifdef DEBUG_LOG_GC
+  printf("%p mark ", (void *)object);
+  printValue(OBJ_VAL(object));
+  printf("\n");
+#endif
+  object->isMarked = true;
+}
+
+void markValue(Value value) {
+  if (IS_OBJ(value))
+    markObject(AS_OBJ(value));
+}
+
+void collectGarbage(VM *vm) {
+#ifdef DEBUG_LOG_GC
+  printf("-- gc begin\n");
+#endif
+
+  markRoots(vm);
+
+#ifdef DEBUG_LOG_GC
+  printf("-- gc end\n");
+#endif
 }

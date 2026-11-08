@@ -2,6 +2,7 @@
 #define clox_memory_h
 
 #include "common.h"
+#include "value.h"
 
 typedef struct VM VM;
 
@@ -20,6 +21,8 @@ typedef struct VM VM;
 #define FREE(type, pointer, vm) reallocate(pointer, sizeof(type), 0, vm)
 
 void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm);
+void markObject(Obj *object);
+void markValue(Value value);
 void collectGarbage(VM *vm);
 void freeObjects(void *list, VM *vm);
 

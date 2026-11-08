@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -15,6 +16,7 @@
 static Obj *allocateObject(size_t size, ObjType type, VM *vm) {
   Obj *object = (Obj *)reallocate(NULL, 0, size, vm);
   object->type = type;
+  object->isMarked = false;
   object->next = vm->objects;
   vm->objects = object;
 
