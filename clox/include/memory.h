@@ -21,8 +21,8 @@ typedef struct VM VM;
 #define FREE(type, pointer, vm) reallocate(pointer, sizeof(type), 0, vm)
 
 void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm);
-void markObject(Obj *object);
-void markValue(Value value);
+void markObject(Obj *object, VM *vm);
+void markValue(Value value, VM *vm);
 void collectGarbage(VM *vm);
 void freeObjects(void *list, VM *vm);
 

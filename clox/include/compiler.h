@@ -65,5 +65,6 @@ typedef struct Compiler {
 } Compiler;
 
 ObjFunction *compile(const char *source, VM *vm);
+void markCompilerRoots(VM *vm);
 
 #endif

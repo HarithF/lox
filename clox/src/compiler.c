@@ -9,6 +9,7 @@
 #include "chunk.h"
 #include "common.h"
 #include "compiler.h"
+#include "memory.h"
 #include "object.h"
 #include "scanner.h"
 #include "value.h"
@@ -1001,4 +1002,12 @@ ObjFunction *compile(const char *source, VM *vm) {
   vm->compiler = NULL; // `compiler` is a local; don't leave it dangling
 
   return compiler.parser.hadError ? NULL : function;
+}
+
+void markCompilerRoots(VM *vm) {
+  struct Scoper *scoper = vm->compiler->scoper;
+  while (scoper != NULL) {
+    markObject((Obj *)scoper->function);
+    scoper = scoper->enclosing;
+  }
 }

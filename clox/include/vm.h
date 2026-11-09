@@ -30,6 +30,10 @@ typedef struct VM {
   Table strings;
   ObjUpvalue *openUpvalues;
   Obj *objects;
+
+  int greyCount;
+  int greyCapacity;
+  Obj **greyStack;
   Compiler *compiler; // compiler in progress (GC root), NULL otherwise
 } VM;
 

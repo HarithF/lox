@@ -1,6 +1,7 @@
 #include "memory.h"
 #include "chunk.h"
 #include "common.h"
+#include "compiler.h"
 #include "object.h"
 #include "value.h"
 #include "vm.h"
@@ -52,20 +53,22 @@ void freeObjects(void *list, VM *vm) {
     freeObject(object, vm);
     object = next;
   }
+  free(vm->greyStack);
 }
 
 static void markRoots(VM *vm) {
   for (Value *slot = vm->stack; slot < vm->stackTop; slot++) {
-    markValue(*slot);
+    markValue(*slot, vm);
   }
   for (int i = 0; i < vm->frameCount; i++) {
-    markObject((Obj *)vm->frames[i].closure);
+    markObject((Obj *)vm->frames[i].closure, vm);
   }
   for (ObjUpvalue *upvalue = vm->openUpvalues; upvalue != NULL;
        upvalue = upvalue->next) {
-    markObject((Obj *)upvalue);
+    markObject((Obj *)upvalue, vm);
   }
   markTable(&vm->globals);
+  markCompilerRoots(vm);
 }
 
 void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm) {
@@ -86,7 +89,7 @@ void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm) {
   return result;
 }
 
-void markObject(Obj *object) {
+void markObject(Obj *object, VM *vm) {
   if (object == NULL)
     return;
 #ifdef DEBUG_LOG_GC
@@ -95,11 +98,19 @@ void markObject(Obj *object) {
   printf("\n");
 #endif
   object->isMarked = true;
+  if (vm->greyCapacity < vm->greyCount + 1) {
+    vm->greyCapacity = GROW_CAPACITY(vm->greyCapacity);
+    vm->greyStack =
+        (Obj **)realloc(vm->greyStack, sizeof(Obj *) * vm->greyCapacity);
+    if (vm->greyStack == NULL)
+      exit(1);
+  }
+  vm->greyStack[vm->greyCount++] = object;
 }
 
-void markValue(Value value) {
+void markValue(Value value, VM *vm) {
   if (IS_OBJ(value))
-    markObject(AS_OBJ(value));
+    markObject(AS_OBJ(value), vm);
 }
 
 void collectGarbage(VM *vm) {
