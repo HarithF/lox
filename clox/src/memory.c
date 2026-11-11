@@ -56,21 +56,6 @@ void freeObjects(void *list, VM *vm) {
   free(vm->greyStack);
 }
 
-static void markRoots(VM *vm) {
-  for (Value *slot = vm->stack; slot < vm->stackTop; slot++) {
-    markValue(*slot, vm);
-  }
-  for (int i = 0; i < vm->frameCount; i++) {
-    markObject((Obj *)vm->frames[i].closure, vm);
-  }
-  for (ObjUpvalue *upvalue = vm->openUpvalues; upvalue != NULL;
-       upvalue = upvalue->next) {
-    markObject((Obj *)upvalue, vm);
-  }
-  markTable(&vm->globals);
-  markCompilerRoots(vm);
-}
-
 void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm) {
   if (new_size > old_size) {
 #ifdef DEBUG_STRESS_GC
@@ -89,8 +74,92 @@ void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm) {
   return result;
 }
 
+static void markRoots(VM *vm) {
+  for (Value *slot = vm->stack; slot < vm->stackTop; slot++) {
+    markValue(*slot, vm);
+  }
+  for (int i = 0; i < vm->frameCount; i++) {
+    markObject((Obj *)vm->frames[i].closure, vm);
+  }
+  for (ObjUpvalue *upvalue = vm->openUpvalues; upvalue != NULL;
+       upvalue = upvalue->next) {
+    markObject((Obj *)upvalue, vm);
+  }
+  markTable(&vm->globals, vm);
+  markCompilerRoots(vm);
+}
+
+static void markArray(ValueArray *array, VM *vm) {
+  for (int i = 0; i < array->count; i++) {
+    markValue(array->values[i], vm);
+  }
+}
+
+static void blackenObject(Obj *object, VM *vm) {
+
+#ifdef DEBUG_LOG_GC
+  printf("%p blacken ", (void *)object);
+  printValue(OBJ_VAL(object));
+  printf("\n");
+#endif
+
+  switch (object->type) {
+  case OBJ_CLOSURE: {
+    ObjClosure *closure = (ObjClosure *)object;
+    markObject((Obj *)closure->function, vm);
+    for (int i = 0; i < closure->upvalueCount; i++) {
+      markObject((Obj *)closure->upvalues[i], vm);
+    }
+    break;
+  }
+  case OBJ_FUNCTION: {
+    ObjFunction *function = (ObjFunction *)object;
+    markObject((Obj *)function->name, vm);
+    markArray(&function->chunk.constants, vm);
+    break;
+  }
+  case OBJ_UPVALUE:
+    markValue(((ObjUpvalue *)object)->closed, vm);
+    break;
+
+  case OBJ_NATIVE:
+  case OBJ_STRING:
+    break;
+  }
+}
+
+static void traceReferences(VM *vm) {
+  while (vm->greyCount > 0) {
+    Obj *object = vm->greyStack[--vm->greyCount];
+    blackenObject(object, vm);
+  }
+}
+
+static void sweep(VM *vm) {
+  Obj *previous = NULL;
+  Obj *object = vm->objects;
+  while (object != NULL) {
+    if (object->isMarked) {
+      object->isMarked = false;
+      previous = object;
+      object = object->next;
+    } else {
+      Obj *unreached = object;
+      object = object->next;
+      if (previous != NULL) {
+        previous->next = object;
+      } else {
+        vm->objects = object;
+      }
+
+      freeObject(unreached, vm);
+    }
+  }
+}
 void markObject(Obj *object, VM *vm) {
   if (object == NULL)
+    return;
+  if (object->isMarked)
     return;
 #ifdef DEBUG_LOG_GC
   printf("%p mark ", (void *)object);
@@ -119,6 +188,9 @@ void collectGarbage(VM *vm) {
 #endif
 
   markRoots(vm);
+  traceReferences(vm);
+  tableRemoveWhite(&vm->strings);
+  sweep(vm);
 
 #ifdef DEBUG_LOG_GC
   printf("-- gc end\n");
