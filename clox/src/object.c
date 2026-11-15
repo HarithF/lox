@@ -60,7 +60,9 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash,
   string->length = length;
   string->chars = chars;
   string->hash = hash;
+  push(OBJ_VAL(string), vm);
   tableSet(&vm->strings, string, NIL_VAL, vm);
+  pop(vm);
   return string;
 }
 

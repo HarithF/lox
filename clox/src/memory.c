@@ -5,12 +5,15 @@
 #include "object.h"
 #include "value.h"
 #include "vm.h"
+#include <cstddef>
 #include <stdlib.h>
 
 #ifdef DEBUG_LOG_GC
 #include "debug.h"
 #include "stdio.h"
 #endif
+
+#define GC_HEAP_GROW_FACTOR 2
 
 void freeObject(Obj *object, VM *vm) {
 #ifdef DEBUG_LOG_GC
@@ -57,10 +60,14 @@ void freeObjects(void *list, VM *vm) {
 }
 
 void *reallocate(void *pointer, size_t old_size, size_t new_size, VM *vm) {
+  vm->bytesAllocated += new_size - old_size;
   if (new_size > old_size) {
 #ifdef DEBUG_STRESS_GC
     collectGarbage(vm);
 #endif
+    if (vm->bytesAllocated > vm->nextGC) {
+      collectGarbage(vm);
+    }
   }
   if (new_size == 0) {
     free(pointer);
@@ -185,6 +192,8 @@ void markValue(Value value, VM *vm) {
 void collectGarbage(VM *vm) {
 #ifdef DEBUG_LOG_GC
   printf("-- gc begin\n");
+  size_t before = vm->bytesAllocated;
+
 #endif
 
   markRoots(vm);
@@ -192,7 +201,11 @@ void collectGarbage(VM *vm) {
   tableRemoveWhite(&vm->strings);
   sweep(vm);
 
+  vm->nextGC = vm->bytesAllocated * GC_HEAP_GROW_FACTOR;
+
 #ifdef DEBUG_LOG_GC
   printf("-- gc end\n");
+  printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
+         before - vm->bytesAllocated, before, vm->bytesAllocated, vm->nextGC);
 #endif
 }
