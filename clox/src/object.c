@@ -52,6 +52,13 @@ ObjFunction *newFunction(VM *vm) {
   return function;
 }
 
+ObjInstance *newInstance(ObjClass *klass, VM *vm) {
+  ObjInstance *instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE, vm);
+  instance->klass = klass;
+  initTable(&instance->fields);
+  return instance;
+}
+
 ObjNative *newNative(NatveFn function, int arity, VM *vm) {
   ObjNative *native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE, vm);
   native->function = function;

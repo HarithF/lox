@@ -3,6 +3,7 @@
 
 #include "chunk.h"
 #include "common.h"
+#include "table.h"
 #include "value.h"
 
 // object.h only needs VM as a pointer;
@@ -11,12 +12,14 @@ typedef struct VM VM;
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 #define IS_STRING(value) (isObjType(value, OBJ_STRING))
 #define IS_FUNCTION(value) (isObjType(value, OBJ_FUNCTION))
+#define IS_INSTANCE(value) (isObjType(value, OBJ_INSTANCE))
 #define IS_NATIVE(value) (isObjType(value, OBJ_NATIVE))
 #define IS_CLOSURE(value) (isObjType(value, OBJ_CLOSURE))
 #define IS_CLASS(value) (isObjType(value, OBJ_CLASS))
 
 #define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
 #define AS_NATIVE(value) (((ObjNative *)AS_OBJ(value))->function)
+#define AS_INSTANCE(value) ((ObjInstance *)AS_OBJ(value))
 #define AS_NATIVE_OBJ(value) ((ObjNative *)AS_OBJ(value))
 #define AS_CLOSURE(value) ((ObjClosure *)AS_OBJ(value))
 #define AS_CLASS(value) ((ObjClass *)AS_OBJ(value))
@@ -27,6 +30,7 @@ typedef enum {
   OBJ_CLASS,
   OBJ_CLOSURE,
   OBJ_FUNCTION,
+  OBJ_INSTANCE,
   OBJ_NATIVE,
   OBJ_STRING,
   OBJ_UPVALUE,
@@ -81,9 +85,16 @@ typedef struct {
   ObjString *name;
 } ObjClass;
 
+typedef struct {
+  Obj obj;
+  ObjClass *klass;
+  Table fields;
+} ObjInstance;
+
 ObjClass *newClass(ObjString *name, VM *vm);
 ObjClosure *newClosure(ObjFunction *function, VM *vm);
 ObjFunction *newFunction(VM *vm);
+ObjInstance *newInstance(ObjClass *klass, VM *vm);
 ObjNative *newNative(NatveFn function, int arity, VM *vm);
 ObjString *takeString(char *chars, int length, VM *vm);
 

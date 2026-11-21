@@ -3,6 +3,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "object.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 #include <stdlib.h>
@@ -34,6 +35,12 @@ void freeObject(Obj *object, VM *vm) {
     ObjFunction *function = (ObjFunction *)object;
     freeChunk(&function->chunk, vm);
     FREE(ObjFunction, object, vm);
+    break;
+  }
+  case OBJ_INSTANCE: {
+    ObjInstance *instance = (ObjInstance *)object;
+    freeTable(&instance->fields, vm);
+    FREE(ObjInstance, object, vm);
     break;
   }
   case OBJ_NATIVE: {
@@ -136,7 +143,12 @@ static void blackenObject(Obj *object, VM *vm) {
   case OBJ_UPVALUE:
     markValue(((ObjUpvalue *)object)->closed, vm);
     break;
-
+  case OBJ_INSTANCE: {
+    ObjInstance *instance = (ObjInstance *)object;
+    markObject((Obj *)instance->klass, vm);
+    markTable(&instance->fields, vm);
+    break;
+  }
   case OBJ_NATIVE:
   case OBJ_STRING:
     break;

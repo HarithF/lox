@@ -39,6 +39,9 @@ void printObject(Value val) {
   case OBJ_FUNCTION:
     printFunction(AS_FUNCTION(val));
     break;
+  case OBJ_INSTANCE:
+    printf("%s instance", AS_INSTANCE(val)->klass->name->chars);
+    break;
 
   case OBJ_NATIVE:
     printf("<native fn>");
