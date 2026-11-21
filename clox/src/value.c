@@ -30,6 +30,9 @@ void freeValueArray(ValueArray *array, VM *vm) {
 
 void printObject(Value val) {
   switch (OBJ_TYPE(val)) {
+  case OBJ_CLASS:
+    printf("%s", AS_CLASS(val)->name->chars);
+    break;
   case OBJ_CLOSURE:
     printFunction(AS_CLOSURE(val)->function);
     break;

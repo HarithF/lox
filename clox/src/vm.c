@@ -397,6 +397,8 @@ static InterpretResult run(VM *vm) {
       frame = &vm->frames[vm->frameCount - 1];
       break;
     }
+    case OP_CLASS:
+      push(OBJ_VAL(newClass(READ_STRING(), vm)), vm);
     }
   }
 

@@ -5,7 +5,6 @@
 #include "object.h"
 #include "value.h"
 #include "vm.h"
-#include <cstddef>
 #include <stdlib.h>
 
 #ifdef DEBUG_LOG_GC
@@ -21,6 +20,10 @@ void freeObject(Obj *object, VM *vm) {
 #endif
 
   switch (object->type) {
+  case OBJ_CLASS: {
+    FREE(ObjClass, object, vm);
+    break;
+  }
   case OBJ_CLOSURE: {
     ObjClosure *closure = (ObjClosure *)object;
     FREE_ARRAY(ObjUpvalue *, closure->upvalues, closure->upvalueCount, vm);
@@ -111,6 +114,11 @@ static void blackenObject(Obj *object, VM *vm) {
 #endif
 
   switch (object->type) {
+  case OBJ_CLASS: {
+    ObjClass *klass = (ObjClass *)object;
+    markObject(object, vm);
+    break;
+  }
   case OBJ_CLOSURE: {
     ObjClosure *closure = (ObjClosure *)object;
     markObject((Obj *)closure->function, vm);

@@ -25,6 +25,11 @@ static Obj *allocateObject(size_t size, ObjType type, VM *vm) {
 #endif
   return object;
 }
+ObjClass *newClass(ObjString *name, VM *vm) {
+  ObjClass *klass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS, vm);
+  klass->name = name;
+  return klass;
+}
 
 ObjClosure *newClosure(ObjFunction *function, VM *vm) {
   ObjUpvalue **upvalues = ALLOCATE(ObjUpvalue *, function->upvalueCount, vm);

@@ -49,6 +49,7 @@ static void statement(Compiler *);
 static ParseRule *getRule(TokenType);
 static void parsePrecedence(Precedence, Compiler *);
 static void defineVariable(uint8_t, Compiler *);
+static void declareVariable(Compiler *);
 static void and_(Compiler *);
 static uint8_t parseVariable(const char *, Compiler *);
 static uint8_t identifierConstant(Compiler *);
@@ -518,6 +519,19 @@ static void function(FunctionType type, Compiler *compiler) {
   }
 }
 
+static void classDeclaration(Compiler* compiler){
+  consume(TOKEN_IDENTIFIER, "Expect class name", compiler);
+  uint8_t nameConstant = identifierConstant(compiler);
+  declareVariable(compiler);
+
+  emitBytes(OP_CLASS, nameConstant,compiler);
+  defineVariable(nameConstant, compiler);
+
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.", compiler);
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.", compiler);
+
+}
+
 static void funDeclaration(Compiler *compiler) {
   uint8_t global = parseVariable("Expect function name.", compiler);
   markInitialized(compiler);
@@ -798,7 +812,9 @@ static void synchronize(Compiler *compiler) {
 }
 
 static void declaration(Compiler *compiler) {
-  if (match(TOKEN_FUN, compiler)) {
+  if (match(TOKEN_CLASS, compiler)){
+    classDeclaration(compiler);
+   }else if (match(TOKEN_FUN, compiler)) {
     funDeclaration(compiler);
   } else if (match(TOKEN_VAR, compiler)) {
     varDeclaration(compiler);
@@ -1007,7 +1023,7 @@ ObjFunction *compile(const char *source, VM *vm) {
 void markCompilerRoots(VM *vm) {
   struct Scoper *scoper = vm->compiler->scoper;
   while (scoper != NULL) {
-    markObject((Obj *)scoper->function);
+    markObject((Obj *)scoper->function, vm);
     scoper = scoper->enclosing;
   }
 }
